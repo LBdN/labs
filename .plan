@@ -1,0 +1,4 @@
+a clean base :
+    * a base config including paths
+    * a P3D able to load a mesh
+    * a QT window with a few widget
