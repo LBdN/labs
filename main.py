@@ -26,14 +26,15 @@ import direct.directbase.DirectStart
 # PyQt GUI (taken from dinoint's 'post)
 #----------------------------------------------------------------------
 
-class QTTest(QDialog):
+class QTTest(QMainWindow):
     def __init__(self, pandaCallback, parent=None):
-        super(QDialog, self).__init__(parent)
+        super(QMainWindow, self).__init__(parent)
         self.setWindowTitle("Test")
-        self.setGeometry(30,30,800,600)
+        self.setGeometry(30,30,800,700)
 
-        self.pandaContainer = QWidget(self)
+        self.pandaContainer = QTPandaWidget(self)
         self.pandaContainer.setGeometry(0,0,P3D_WIN_WIDTH,P3D_WIN_HEIGHT)
+        #self.pandaContainer.setSizePolicy(QSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed))
 
         #hellobutton = Qt.QPushButton("Say 'Hello world!'",None)
         ## And connect the action "sayHello" to the event "button has been clicked"
@@ -42,12 +43,13 @@ class QTTest(QDialog):
         #self.lineedit = QLineEdit("Proba ugnjezdenog prikaza...")
 
         self.layout = QVBoxLayout()
-        #layout.addWidget(self.pandaContainer)
+        self.layout.addWidget(self.pandaContainer)
         #layout.addWidget(self.lineedit)
         #layout.addWidget(self.lineedit)
         #layout.addWidget(self.lineedit)
-
-        self.setLayout(self.layout)
+        centralWidget = QWidget(self)
+        centralWidget.setLayout(self.layout)
+        self.setCentralWidget(centralWidget)
 
         # this basically creates an idle task
         timer =  QTimer(self)
@@ -58,6 +60,20 @@ class QTTest(QDialog):
 #----------------------------------------------------------------------
 # main program
 #----------------------------------------------------------------------
+
+class QTPandaWidget(QWidget):
+   def __init__(self, parent=None):
+      super(QWidget, self).__init__(parent)
+      self.setSizePolicy(QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding))
+      
+   def resizeEvent(self, evt):
+      wp = WindowProperties()
+      wp.setSize(self.width(), self.height())
+      wp.setOrigin(self.x(),self.y())
+      base.win.requestProperties(wp)
+   
+   def minimumSizeHint(self):
+      return QSize(P3D_WIN_WIDTH,P3D_WIN_HEIGHT)
 
 class PandaPseudoWindow(DirectObject):
     def __init__(self):

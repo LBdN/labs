@@ -31,12 +31,29 @@ class SpinCamera(object):
         self.camera.setHpr(angle_deg, 0, 0)
         return Task.cont
 
+from collections import defaultdict
+
 class Data(object):
     def __init__(self):
+        self.views = defaultdict(list)
         pass
 
-    def read(self):
-        pass
+    def update(self, old, new, sender, transaction)
+            for view in views.values():
+                view.notify(old_v, self.v, sender, transaction)
+
+class Int(Data):
+    def __init__(self, v):
+        Data.__init__(self)
+        self.v = v
+
+    def set_value(self, new_v, sender, transaction):
+        if new_v != self.v :
+            old_v  = self.v
+            self.v = new_v
+            self.update(old_v, self.v, sender, transaction)
+
+
 
 class Mesh3d(object):
     def __init__(self, path, scale, pos):
@@ -44,8 +61,10 @@ class Mesh3d(object):
         self.path  = path
         self.pos   = pos
 
+
 def default():
         d = [ Mesh3d("models/environment", (0.25,0.25,0.25), (-8,42,0)),
+              7, 
               FakeAction()]
         return d
 
