@@ -3,17 +3,18 @@ import p_base
 from PyQt4.QtGui         import *
 from PyQt4.QtCore        import *
 
+
 class Reader(object):
     def read(self, obj):
         if isinstance(obj, self._type):
             print "catching %s" %self._type
-            view = obj.views.get(self)
+            view = obj.get_inactive_views(self)
             if not view : 
                 view = self._read(obj)
-                obj.views[self] = view
-            return self._read(obj)
-        print self._type, type(obj)
+            obj.set_active_view(self, view)
+            return view
         return obj
+
 
 class MeshReader(Reader):
     _type = p_base.Mesh3d
@@ -23,10 +24,12 @@ class MeshReader(Reader):
         self.parent = parent
 
     def _read(self, mesh):
-        obj = self.loader.loadModel(mesh.path)
+        path, scale, pos = mesh.value
+        obj = self.loader.loadModel(path)
         obj.reparentTo(self.parent)
-        obj.setScale(*mesh.scale)
-        obj.setPos(*mesh.pos)
+        obj.setScale(*scale)
+        obj.setPos(*pos)
+
 
 class IntReader(Reader):
     _type = p_base.Int
@@ -35,16 +38,11 @@ class IntReader(Reader):
         self.container = container
         self.connect   = connect
 
-    def _read(self, IntValue):
-        view = int_value.views.get(self)
-        if not view:
-            btn = MyQPushButton()
-            self.container.addWidget(btn)
-            self.connect(btn, SIGNAL("clicked()"), int_value.set_value())
-
-
-
-
+    def _read(self, int_value):
+        btn = MyQPushButton(int_value)
+        self.container.addWidget(btn)
+        #self.connect(btn, SIGNAL("clicked()"), btn.execute)
+        self.connect(btn, SIGNAL("clicked()"), btn, SLOT('execute2()'))
 
 
 class ActionReader(Reader):
@@ -55,20 +53,30 @@ class ActionReader(Reader):
         self.connect   = connect
 
     def _read(self, action):
-        btn = MyQPushButton()
-        btn.setMouseTracking(1)
+        btn = MyQPushButton(action)
+        #btn.setMouseTracking(1)
         self.container.addWidget(btn)
-        self.connect(btn, SIGNAL("clicked()"), action.execute)
+        self.connect(btn, SIGNAL("clicked()"), btn, SLOT('execute()'))
+
 
 class MyQPushButton(QPushButton):
+    def __init__(self, v):
+        QPushButton.__init__(self)
+        self.v = v
+
     def mouseMoveEvent(self, event): 
         print "on Hover", event.pos().x(), event.pos().y(), event.buttons()
+
+    @pyqtSlot()
+    def execute(self):
+        self.v.execute()
             
 
 def reader_prepare(loader, parent, container, connect):
     r = []
     r.append(MeshReader(loader, parent))
     r.append(ActionReader(container, connect))
+    r.append(IntReader(container, connect))
     return r
 
 def read_all(to_read, readers):

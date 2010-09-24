@@ -26,6 +26,7 @@ import direct.directbase.DirectStart
 # PyQt GUI (taken from dinoint's 'post)
 #----------------------------------------------------------------------
 
+
 class QTTest(QMainWindow):
     def __init__(self, pandaCallback, parent=None):
         super(QMainWindow, self).__init__(parent)
@@ -61,6 +62,7 @@ class QTTest(QMainWindow):
 # main program
 #----------------------------------------------------------------------
 
+
 class QTPandaWidget(QWidget):
    def __init__(self, parent=None):
       super(QWidget, self).__init__(parent)
@@ -74,6 +76,7 @@ class QTPandaWidget(QWidget):
    
    def minimumSizeHint(self):
       return QSize(P3D_WIN_WIDTH,P3D_WIN_HEIGHT)
+
 
 class PandaPseudoWindow(DirectObject):
     def __init__(self):

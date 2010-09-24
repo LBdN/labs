@@ -1,18 +1,57 @@
-class Action(object):
-    def __init__(self):
-        pass
+import tree
+#==
+from collections import defaultdict
+from math        import cos, sin, radians
 
+class Action(tree.Node):
     def execute(self):
         pass
 
-class FakeAction(Action):
+class Name(tree.Node, tree.OneChildMixin):
+    def __init__(self, name, _type):
+        tree.Node.__init__(self)
+        self.name  = name
+        self._type = _type
+
+    def get_data(self):
+        return self.children[0] if self.children else None
+
+
+class Data(tree.Node):
+    def __init__(self, value):
+        tree.Node.__init__(self)
+        self.inactive_views = defaultdict(list)
+        self.active_views   = defaultdict(list)
+        self.value          = value
+
+    def get_inactive_views(self, key):
+        views =  self.inactive_views[key]
+        return views.pop() if views else None
+
+    def set_active_view(self, key, view):
+        self.active_views[key].append(view)
+
+    def update(self, old, new, sender, transaction):
+        for view in sum(self.active_views.values(), []):
+            view.notify(old, new, sender, transaction)
+
+    def set_value(self, new_v, sender, transaction):
+        if new_v != self.v :
+            old_v  = self.v
+            self.v = new_v
+            self.update(old_v, self.v, sender, transaction)
+
+    def execute(self):
+        print "test"
+
+class FakeAction(Data):
     def execute(self):
         print "hello"
 
-from math import cos, sin, radians
 
-class SpinCamera(object):
+class SpinCamera(Action):
     def __init__(self, taskMgr, camera):
+        Action.__init__(self)
         self.taskMgr = taskMgr
         self.camera  = camera
         self.started = False
@@ -31,40 +70,20 @@ class SpinCamera(object):
         self.camera.setHpr(angle_deg, 0, 0)
         return Task.cont
 
-from collections import defaultdict
 
-class Data(object):
-    def __init__(self):
-        self.views = defaultdict(list)
-        pass
-
-    def update(self, old, new, sender, transaction)
-            for view in views.values():
-                view.notify(old_v, self.v, sender, transaction)
 
 class Int(Data):
     def __init__(self, v):
-        Data.__init__(self)
-        self.v = v
-
-    def set_value(self, new_v, sender, transaction):
-        if new_v != self.v :
-            old_v  = self.v
-            self.v = new_v
-            self.update(old_v, self.v, sender, transaction)
+        Data.__init__(self, v)
 
 
-
-class Mesh3d(object):
+class Mesh3d(Data):
     def __init__(self, path, scale, pos):
-        self.scale = scale
-        self.path  = path
-        self.pos   = pos
+        Data.__init__(self,(path, scale, pos)) 
 
 
 def default():
         d = [ Mesh3d("models/environment", (0.25,0.25,0.25), (-8,42,0)),
-              7, 
-              FakeAction()]
+              Int(7), 
+              FakeAction(None)]
         return d
-
