@@ -42,7 +42,8 @@ class IntReader(Reader):
         btn = MyQPushButton(int_value)
         self.container.addWidget(btn)
         #self.connect(btn, SIGNAL("clicked()"), btn.execute)
-        self.connect(btn, SIGNAL("clicked()"), btn, SLOT('execute2()'))
+        #self.connect(btn, SIGNAL("clicked()"), btn, SLOT('execute2()'))
+        self.connect(btn, SIGNAL("clicked()"), RAction(int_value, btn), SLOT('execute()'))
 
 
 class ActionReader(Reader):
@@ -56,7 +57,17 @@ class ActionReader(Reader):
         btn = MyQPushButton(action)
         #btn.setMouseTracking(1)
         self.container.addWidget(btn)
-        self.connect(btn, SIGNAL("clicked()"), btn, SLOT('execute()'))
+        self.connect(btn, SIGNAL("clicked()"), RAction(action, btn), SLOT('execute()'))
+
+class RAction(QObject):
+    def __init__(self, v, parent):
+        QObject.__init__(self)
+        #QObject.__init__(self, parent)
+        self.v = v
+
+    @pyqtSlot()
+    def execute(self):
+        self.v.execute()
 
 
 class MyQPushButton(QPushButton):
@@ -67,9 +78,9 @@ class MyQPushButton(QPushButton):
     def mouseMoveEvent(self, event): 
         print "on Hover", event.pos().x(), event.pos().y(), event.buttons()
 
-    @pyqtSlot()
-    def execute(self):
-        self.v.execute()
+    #@pyqtSlot()
+    #def execute(self):
+        #self.v.execute()
             
 
 def reader_prepare(loader, parent, container, connect):
