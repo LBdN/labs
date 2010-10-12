@@ -5,8 +5,11 @@ from PyQt4.QtCore        import *
 
 
 class Reader(object):
+    def match(self, obj):
+        return isinstance(obj, self._type)
+
     def read(self, obj):
-        if isinstance(obj, self._type):
+        if self.match(obj):
             print "catching %s" %self._type
             view = obj.get_inactive_views(self)
             if not view : 
@@ -15,79 +18,74 @@ class Reader(object):
             return view
         return obj
 
-
 class MeshReader(Reader):
     _type = p_base.Mesh3d
 
-    def __init__(self, loader, parent):
-        self.loader = loader
-        self.parent = parent
+    def __init__(self, ctx_panda):
+        self.ctx_panda = ctx_panda
 
     def _read(self, mesh):
         path, scale, pos = mesh.value
-        obj = self.loader.loadModel(path)
-        obj.reparentTo(self.parent)
+        obj = self.ctx_panda.load(path)
         obj.setScale(*scale)
         obj.setPos(*pos)
-
+        return obj
 
 class IntReader(Reader):
     _type = p_base.Int
 
-    def __init__(self, container, connect):
-        self.container = container
-        self.connect   = connect
+    def __init__(self, ctx_qt):
+        self.ctx_qt = ctx_qt
 
     def _read(self, int_value):
-        btn = MyQPushButton(int_value)
-        self.container.addWidget(btn)
-        #self.connect(btn, SIGNAL("clicked()"), btn.execute)
-        #self.connect(btn, SIGNAL("clicked()"), btn, SLOT('execute2()'))
-        self.connect(btn, SIGNAL("clicked()"), RAction(int_value, btn), SLOT('execute()'))
+        btn = MyQSpinBox(int_value, self.ctx_qt)
+        self.ctx_qt.layout.addWidget(btn)
+        btn.valueChanged.connect(btn._value_changed)
+        return btn
 
+class MyQSpinBox(QSpinBox):
+    def __init__(self, v, parent):
+        QSpinBox.__init__(self, parent)
+        self.in_change = False
+        self.v = v
+
+    def _value_changed(self, new_int):
+        if self.in_change:
+            return
+        self.v.set_value(new_int, self, None)
+
+    def notify(self, old, new, sender, transaction):
+        if sender is self:
+            return
+        #==
+        self.in_change = True
+        self.setValue(new)
+        self.in_change = False
 
 class ActionReader(Reader):
-    _type = p_base.FakeAction
+    _type = p_base.SpinCamera
 
-    def __init__(self, container, connect):
-        self.container = container
-        self.connect   = connect
+    def __init__(self, ctx_qt):
+        self.ctx_qt = ctx_qt
 
-    def _read(self, action):
-        btn = MyQPushButton(action)
-        #btn.setMouseTracking(1)
-        self.container.addWidget(btn)
-        self.connect(btn, SIGNAL("clicked()"), RAction(action, btn), SLOT('execute()'))
-
-class RAction(QObject):
-    def __init__(self, v, parent):
-        QObject.__init__(self)
-        #QObject.__init__(self, parent)
-        self.v = v
-
-    @pyqtSlot()
-    def execute(self):
-        self.v.execute()
-
+    def _read(self, int_value):
+        btn = MyQPushButton(int_value, self.ctx_qt)
+        self.ctx_qt.layout.addWidget(btn)
+        btn.clicked.connect(btn._clicked)
 
 class MyQPushButton(QPushButton):
-    def __init__(self, v):
-        QPushButton.__init__(self)
+    def __init__(self, v, parent):
+        QPushButton.__init__(self, parent)
         self.v = v
 
-    def mouseMoveEvent(self, event): 
-        print "on Hover", event.pos().x(), event.pos().y(), event.buttons()
+    def _clicked(self):
+        self.v.execute()
 
-    #@pyqtSlot()
-    #def execute(self):
-        #self.v.execute()
-            
-
-def reader_prepare(loader, parent, container, connect):
+def reader_prepare(ctx_panda, ctx_qt):
     r = []
-    r.append(MeshReader(loader, parent))
-    r.append(ActionReader(container, connect))
-    r.append(IntReader(container, connect))
+    r.append(MeshReader(ctx_panda))
+    r.append(ActionReader(ctx_qt))
+    r.append(IntReader(ctx_qt))
     return r
 
 def read_all(to_read, readers):

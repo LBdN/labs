@@ -11,7 +11,7 @@ from direct.showbase.DirectObject import *
 from pandac.PandaModules          import WindowProperties
 from pandac.PandaModules          import loadPrcFileData
 from pandac.PandaModules          import *
-
+from direct.task                  import Task
 from math                         import *
 
 import sys
@@ -45,9 +45,6 @@ class QTTest(QMainWindow):
 
         self.layout = QVBoxLayout()
         self.layout.addWidget(self.pandaContainer)
-        #layout.addWidget(self.lineedit)
-        #layout.addWidget(self.lineedit)
-        #layout.addWidget(self.lineedit)
         centralWidget = QWidget(self)
         centralWidget.setLayout(self.layout)
         self.setCentralWidget(centralWidget)
@@ -92,6 +89,15 @@ class PandaPseudoWindow(DirectObject):
     def step(self):
         taskMgr.step()
 
+class ContextPanda(object):
+    def __init__(self, loader, render):
+        self.loader = loader
+        self.render = render
+
+    def load(self, path):
+        obj = self.loader.loadModel(path)
+        obj.reparentTo(self.render)
+        return obj
 
 if __name__ == '__main__':
     world = PandaPseudoWindow()
@@ -101,8 +107,10 @@ if __name__ == '__main__':
     form.show()
     
     import reader, p_base
-    readers = reader.reader_prepare(loader, render, form.layout, form.connect)
-    to_read = p_base.default()
+    ctx_panda = ContextPanda(loader, render)
+    ctx_qt    = form
+    readers   = reader.reader_prepare(ctx_panda, ctx_qt)
+    to_read   = p_base.default(taskMgr, base.camera, Task)
     reader.read_all(to_read, readers)
 
     app.exec_()
