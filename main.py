@@ -1,8 +1,6 @@
 # -*- coding: UTF-8 -*-
-
-
-from PyQt4.QtCore        import *
-from PyQt4.QtGui         import *
+from PyQt4.QtCore import *
+from PyQt4.QtGui  import *
 
 P3D_WIN_WIDTH  = 800
 P3D_WIN_HEIGHT = 500
@@ -22,6 +20,7 @@ loadPrcFileData("", "window-type none")
 
 import direct.directbase.DirectStart
 
+import qtgraph
 #----------------------------------------------------------------------
 # PyQt GUI (taken from dinoint's 'post)
 #----------------------------------------------------------------------
@@ -45,9 +44,13 @@ class QTTest(QMainWindow):
 
         self.layout = QVBoxLayout()
         self.layout.addWidget(self.pandaContainer)
+        #self.view = QGraphicsView()
+        self.view = qtgraph.GraphWidget()
+        self.layout.addWidget(self.view)
         centralWidget = QWidget(self)
         centralWidget.setLayout(self.layout)
         self.setCentralWidget(centralWidget)
+        #==
 
         # this basically creates an idle task
         timer =  QTimer(self)

@@ -25,9 +25,13 @@ def disconnect(child, parent):
     parent.invariant()
 
 class Node(object):
-    def __init__(self):
+    def __init__(self, cargo = None):
         self.children = []
         self.parents  = []
+        self.cargo    = cargo
+
+    def invariant(self):
+        pass
 
 class OneChildMixin(object):
     def invariant(self):

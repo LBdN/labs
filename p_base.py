@@ -1,28 +1,17 @@
 import tree
+import utils
+import _type
 #==
 from collections import defaultdict
 from math        import cos, sin, radians
 
-class Action(tree.Node):
-    def execute(self):
-        pass
 
 class Name(tree.Node, tree.OneChildMixin):
     def __init__(self, name, _type):
         tree.Node.__init__(self)
-        self.name  = name
-        self._type = _type
-
-    def get_data(self):
-        return self.children[0] if self.children else None
-
-
-class Data(tree.Node):
-    def __init__(self, value):
-        tree.Node.__init__(self)
         self.inactive_views = defaultdict(list)
         self.active_views   = defaultdict(list)
-        self.value          = value
+        self.name           = name
 
     def get_inactive_views(self, key):
         views =  self.inactive_views[key]
@@ -39,24 +28,57 @@ class Data(tree.Node):
             self.inactive_views[key].extend(actives)
             self.active_views[key] = []
 
-
     def update(self, old, new, sender, transaction):
         for view in sum(self.active_views.values(), []):
             view.notify(old, new, sender, transaction)
 
+
+class Data(tree.Node):
+    def __init__(self, value, _type=None):
+        tree.Node.__init__(self)
+        self.value = value
+        self._type = _type or utils.identity
+
+    def update(self, old, new, sender, transaction):
+        for parent in self.parents:
+            parent.update(old, new, sender, transaction)
+
     def set_value(self, new_v, sender, transaction):
-        if new_v != self.value :
-            old_v  = self.value
-            self.value = new_v
-            self.update(old_v, self.value, sender, transaction)
+        if new_v == self.value:
+            return True
+        if not self._type(new_v):
+            return False
+        #==
+        old_v      = self.value
+        self.value = new_v
+        self.update(old_v, self.value, sender, transaction)
 
     def execute(self):
         print "test"
+
+class List(Data):
+    def add_value(self, new_v, sender, transaction):
+        if not self._type(new_v):
+            return False
+        #==
+        old_v      = self.value
+        self.value = old_v + [new_v]
+        self.update(old_v, self.value, sender, transaction)
+
+    def remove_value(self, new_v, sender, transaction):
+        pass
+
+    def set_value(self, new_v, sender, transaction):
+        pass
+
 
 class FakeAction(Data):
     def execute(self):
         print "hello"
 
+class Action(tree.Node):
+    def execute(self):
+        pass
 
 class SpinCamera(Data):
     def __init__(self, taskMgr, camera, Task):
@@ -82,7 +104,6 @@ class SpinCamera(Data):
             self.camera.setPos(20 * sin(angle_rad), -20.0 * cos(angle_rad), 3)
             self.camera.setHpr(angle_deg, 0, 0)
             return self.Task.cont
-
 
 
 class Int(Data):

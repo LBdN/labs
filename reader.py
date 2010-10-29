@@ -1,4 +1,7 @@
 import p_base
+import qtgraph
+
+import random
 
 from PyQt4.QtGui         import *
 from PyQt4.QtCore        import *
@@ -81,11 +84,40 @@ class MyQPushButton(QPushButton):
     def _clicked(self):
         self.v.execute()
 
+class NodeReader(Reader):
+
+    _type = p_base.Data
+    def __init__(self, ctx_qt):
+        self.ctx_qt = ctx_qt
+        self.graph  = qtgraph.Graph(ctx_qt.view)
+        self.done   = False
+
+    def _read(self, any_val):
+        if self.done :
+            return any_val
+        else:
+            self.done = True
+        size  = 50
+        nodes = []
+        for i in range(0,500,100):
+            for j in range(0,500,100):
+                n  = self.graph.drawNode(any_val, size, (i,j))
+                if nodes:
+                    start = random.choice(nodes)
+                    e = self.graph.drawEgde(start, n, size)
+                    n.edgeList.append(e)
+                    start.edgeList.append(e)
+                nodes.append(n)
+        #r = qtgraph.getRect(nodes)
+        #self.graph.centerScene(r)
+        return any_val
+
 def reader_prepare(ctx_panda, ctx_qt):
     r = []
     r.append(MeshReader(ctx_panda))
     r.append(ActionReader(ctx_qt))
     r.append(IntReader(ctx_qt))
+    r.append(NodeReader(ctx_qt))
     return r
 
 def read_all(to_read, readers):
@@ -96,5 +128,4 @@ def read_all(to_read, readers):
             res = r.read(el)
             if   res is None : break 
             elif res != el   : to_read.append(res)
-            else             : pass
         max -= 1

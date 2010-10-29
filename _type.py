@@ -1,4 +1,4 @@
-import tree
+from . import tree
 
 class TypeValidator(object):
     def validate(self, naked_instance):
