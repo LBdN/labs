@@ -1,5 +1,5 @@
-from . import tree
-from . import _type as t
+from .. import tree
+from .. import _type as t
 
 def test_list_int():
     a = range(5)
