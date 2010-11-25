@@ -36,4 +36,7 @@ class Node(object):
 class OneChildMixin(object):
     def invariant(self):
         assert len(self.children) <= 1
-        assert len(self.parents)  == 1
+        #assert len(self.parents)  == 1
+
+    def get_only_child(self):
+        return self.children[0]

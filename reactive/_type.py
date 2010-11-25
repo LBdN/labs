@@ -8,7 +8,7 @@ class BaseValidator(TypeValidator):
     def __init__(self, _class):
         self._class = _class
     def validate(self, naked_instance):
-        return isinstance(self, self._class)
+        return isinstance(naked_instance, self._class)
 
 class RType(tree.Node):
     def __init__(self, factory, type_validator=None, tname=None):
@@ -18,12 +18,15 @@ class RType(tree.Node):
         tree.Node.__init__(self)
 
     def validate(self, naked_instance):
-        self.type_validator.validate(naked_instance)
+        return self.type_validator.validate(naked_instance)
 
     def get_default(self):
         v = self._get_default()
         assert self.validate(v)
         return v
+
+    def _get_default(self):
+        return self.factory()
 
 class RClass(RType):
     def invariant(self):
@@ -47,7 +50,7 @@ class RClass(RType):
         tree.connect(n, self) 
 
 
-class Name(tree.Node):
+class Name(tree.Node, tree.OneChildMixin):
     def __init__(self, name='anonymous'):
         self.name = name
         tree.Node.__init__(self)
@@ -80,7 +83,6 @@ class RList(RType):
         i = Index(idx)
         tree.connect(rtype, i) 
         tree.connect(i, self) 
-
 
 class Index(Name):
     def __init__(self, idx):
