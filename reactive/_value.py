@@ -27,19 +27,19 @@ class ReactiveMeta(type):
         T.rtype = r
         #==
         return T
-        #return type.__new__(cls, name, bases, dct)
 
     def __init__(cls, name, bases, dct):
         super(ReactiveMeta, cls).__init__(name, bases, dct)
 
-#def ReactiveMeta( name, bases, dct):
-    ##super(ReactiveMeta, cls).__init__(name, bases, attrs)
-    #return type( name, bases, attrs)
-        ##setattr(cls, '__init__', lambda self : )
 
 class Reactive(object):
+    __metaclass__ = ReactiveMeta
     def __init__(self, **kw):
-        self.rtype.get_default()
+        assert False
+
+    @classmethod
+    def call(cls, **kw):
+        return cls.rtype.get_default()
 
 class IName(tree.Node):
     def __init__(self, name, annotations):
