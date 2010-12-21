@@ -35,10 +35,10 @@ class ReactiveMeta(type):
 class Reactive(object):
     __metaclass__ = ReactiveMeta
     def __init__(self, **kw):
-        assert False
+        pass
 
     @classmethod
-    def call(cls, **kw):
+    def create(cls, **kw):
         return cls.rtype.get_default()
 
 class IName(tree.Node):
