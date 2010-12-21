@@ -44,8 +44,6 @@ def sink(f):
 @sink
 def pprint(a):
     print a
-    return a
-
 
 def test():
     gp = base.GeneratorProto(base.value, 5)
