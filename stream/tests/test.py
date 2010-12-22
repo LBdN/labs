@@ -23,6 +23,7 @@ def func_to_node(f):
         islot = graph.ISlot()
         islots.append(islot)
         tree.connect(tn, islot)
+    #==
     return islots, tn, os
 
 def add(a, b):
@@ -52,10 +53,8 @@ def test():
     tree.connect(os, tn)
     #==
     oss = [os]
-    i   = 0
-    while oss and i<100:
-        op = random.choice([add, minus, inc, decr, pprint])
-        i  = i + 1
+    for i in range(100):
+        op         = random.choice([add, minus, inc, decr])
         iss, _, os = func_to_node(op)
         for i in iss:
             tree.connect(i, random.choice(oss))
@@ -63,7 +62,7 @@ def test():
             oss.append(os)
     #==
     while oss:
-        op = pprint
+        op         = pprint
         iss, _, os = func_to_node(op)
         for i in iss:
             tree.connect(i, oss.pop())

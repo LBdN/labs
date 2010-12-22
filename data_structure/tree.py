@@ -51,9 +51,19 @@ class Node(object):
     def invariant(self):
         pass
 
+    def __repr__(self):
+        return repr(self.cargo) if self.cargo else str(self.__class__.__name__.lower())
+
 class OneChildMixin(object):
     def invariant(self):
         assert len(self.children) <= 1
 
     def get_only_child(self):
         return self.children[0]
+
+
+def prettyprint(node, inc, _str=None):
+    _str = '  '*inc+ str(node)+'\n'
+    for child in node.children:
+        _str += ''.join(prettyprint(child, inc+1))
+    return _str
