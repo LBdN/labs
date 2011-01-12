@@ -1,5 +1,6 @@
 from .. import base
 from .. import graph
+from labs.data_structure import tree
 #from ..data_structure import tree
 
 def func_to_node(f):
@@ -7,14 +8,17 @@ def func_to_node(f):
     tn = graph.TNode(cargo=gp)
     #==
     os = graph.OSlot()
-    graph.connect(os, tn)
+    tree.connect(os, tn)
     #==
-    nb_arg = f.__code__.co_argcount
+    if f.__code__.co_varnames: nb_arg = 1
+    else                     : nb_arg = f.__code__.co_argcount
+    #==
     islots = []
     for i in range(nb_arg):
         islot = graph.ISlot()
         islots.append(islot)
-        graph.connect(tn, islot)
+        tree.connect(tn, islot)
+    assert islots
     return islots
 
 def add(a, b):
@@ -33,11 +37,11 @@ def test():
     gp = base.GeneratorProto(base.value, 5)
     tn = graph.TNode(cargo=gp)
     os = graph.OSlot()
-    graph.connect(os, tn)
+    tree.connect(os, tn)
     #==
     iss = func_to_node(inc)
-    graph.connect(iss[0],os)
+    tree.connect(iss[0],os)
     iss = func_to_node(decr)
-    graph.connect(iss[0],os)
+    tree.connect(iss[0],os)
     #==
     return tn

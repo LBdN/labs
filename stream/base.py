@@ -1,6 +1,7 @@
 import types
-import labs.data_structure.tree as tree
 import collections
+#==
+import labs.data_structure.tree as tree
 
 class GeneratorProto(object):
     def __init__(self, gen, params=None):
@@ -56,7 +57,7 @@ def broadcast(targets):
         new_val = (yield)
         if new_val is not None:
             for t in targets:
-                print 'broadcasting to %s' %t.__name__
+                #print 'broadcasting to %s' %t.__name__
                 t.send(new_val)
 
 def transformer(target, func):
@@ -68,7 +69,7 @@ def transformer(target, func):
 def index(idx, target):
     while True:
         val = (yield)
-        print 'index forwarding to %s' %target.__name__
+        #print 'index forwarding to %s' %target.__name__
         target.send((idx, val))
 
 def zzip(length, target):
@@ -76,11 +77,11 @@ def zzip(length, target):
     while True:
         _val = (yield)
         if _val is not None:
-            print "getting partial result"
+            #print "getting partial result"
             idx, val   = _val
             _list[idx] = val
         if None not in _list:
-            print 'zipping and sending to %s' %target.__name__
+            #print 'zipping and sending to %s' %target.__name__
             target.send(_list)
 
 def sink(target, func):

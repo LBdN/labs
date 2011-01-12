@@ -35,7 +35,7 @@ class ReactiveMeta(type):
 class Reactive(object):
     __metaclass__ = ReactiveMeta
     def __init__(self, **kw):
-        pass
+        self.__dict__.update(kw)
 
     @classmethod
     def create(cls, **kw):

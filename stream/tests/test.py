@@ -17,7 +17,8 @@ def func_to_node(f):
     else:
         os = None
     #==
-    nb_arg = f.__code__.co_argcount
+    if f.__code__.co_varnames: nb_arg = 1
+    else                     : nb_arg = f.__code__.co_argcount
     islots = []
     for i in range(nb_arg):
         islot = graph.ISlot()
@@ -43,8 +44,8 @@ def sink(f):
     return f
 
 @sink
-def pprint(a):
-    print a
+def pprint(*args):
+    print args
 
 def test():
     gp = base.GeneratorProto(base.value, 5)
@@ -58,13 +59,11 @@ def test():
         iss, _, os = func_to_node(op)
         for i in iss:
             tree.connect(i, random.choice(oss))
-        if os:
-            oss.append(os)
+        oss.append(os)
     #==
+    op         = pprint
+    iss, _, os = func_to_node(op)
     while oss:
-        op         = pprint
-        iss, _, os = func_to_node(op)
-        for i in iss:
-            tree.connect(i, oss.pop())
+        tree.connect(random.choice(iss), oss.pop())
     assert not oss
     return tn

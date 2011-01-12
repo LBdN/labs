@@ -1,4 +1,4 @@
-from .. import _type as t
+from labs.reactive import _type as t
 
 def test_list_int():
     a = range(5)
@@ -6,7 +6,7 @@ def test_list_int():
     tl  = t.RList()
     tl.add_idx('multi', t.RType(int))
     #==
-    tl.validate(a)
+    return tl.validate(a)
 
 
 def test_list_mixed():
@@ -18,7 +18,7 @@ def test_list_mixed():
     tl.add_idx(1, t.RType(float))
     tl.add_idx(2, t.RType(str))
     #==
-    tl.validate(a)
+    return tl.validate(a)
 
 def test_class():
     #==
@@ -33,6 +33,6 @@ def test_class():
     tc.add_attr("first", t.RType(int))
     tc.add_attr("second", t.RType(str))
     #==
-    tc.validate(a)
+    return tc.validate(a)
 
 

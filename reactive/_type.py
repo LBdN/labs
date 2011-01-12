@@ -11,11 +11,11 @@ class BaseValidator(TypeValidator):
         return isinstance(naked_instance, self._class)
 
 class RType(tree.Node):
-    def __init__(self, factory, type_validator=None, tname=None):
+    def __init__(self, factory, type_validator=None, tname=None, children=None):
         self.factory        = factory
         self.type_validator = type_validator or BaseValidator(factory)
         self.tname          = tname or str(type(factory))
-        tree.Node.__init__(self)
+        tree.Node.__init__(self, children=children)
 
     def validate(self, naked_instance):
         return self.type_validator.validate(naked_instance)
@@ -83,6 +83,7 @@ class RList(RType):
         i = Index(idx)
         tree.connect(rtype, i) 
         tree.connect(i, self) 
+        return self
 
 class Index(Name):
     def __init__(self, idx):
@@ -103,17 +104,17 @@ class Index(Name):
 
 
 class RUnion(RType):
-    def __init__(self, subtypes):
-        self.subtypes = subtypes
+    def __init__(self, children=None):
+        RType.__init__(self, None, children=children)
 
     def validate(self, naked_instance):
-        return any( s.validate(naked_instance) for s in self.subtypes)
+        return any( s.validate(naked_instance) for s in self.children)
 
     def _get_default(self):
-        return self.subtypes[0].get_default()
+        return self.children[0].get_default()
 
     def get_active(self, naked_instance):
-        for s in enumerate(self.subtypes):
+        for s in enumerate(self.children):
             if s.validate(naked_instance):
                 return s
 

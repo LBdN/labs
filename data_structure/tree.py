@@ -31,10 +31,15 @@ def disconnect(child, parent):
     parent.post_disconnect(child, None)
 
 class Node(object):
-    def __init__(self, cargo = None):
+    def __init__(self, cargo = None, children=None):
         self.children = []
         self.parents  = []
         self.cargo    = cargo
+        #==
+        print self, children
+        if children:
+            for c in children:
+                connect(c, self)
 
     def pre_disconnect(self, child, parent):
         self.invariant()
