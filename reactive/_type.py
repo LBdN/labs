@@ -58,6 +58,9 @@ class Name(tree.Node, tree.OneChildMixin):
     def extract(self, inst):
         return getattr(inst, self.name, None)
 
+    def set(self, inst, value):
+        setattr(inst, self.name, value)
+
     def get_default(self):
         ttype = self.get_only_child()
         return ttype.get_default()
@@ -91,9 +94,12 @@ class Index(Name):
         self.multi = idx == 'multi'
         Name.__init__(self, idx) 
 
-    def extract(self, inst):
-        assert not self.multi
-        return inst[self.name]
+    def extract(self, inst, idx=None):
+        assert (self.multi and idx is not None) or \
+               (idx and not self.multi) 
+        #==
+        if self.multi : return inst[idx]
+        else          : return inst[self.name]
 
     def validate(self, naked_instance):
         if self.multi:
