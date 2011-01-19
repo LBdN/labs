@@ -1,97 +1,85 @@
 from ..data_structure import tree
-from _type import RType, RClass, Name, Index
+import _base as b
 
-def error(obj):
-    assert False
+class __Symbol():
+    pass
 
-def create(inst, **kw):
-    inst.rtype.get_default()
+Nothing     = __Symbol()
+RemoveItem  = __Symbol()
+AddItem     = __Symbol()
+ReplaceItem = __Symbol()
 
-
-class ReactiveMeta(type):
-    def __new__(cls, name, bases, dct):
-        print "Allocating", name
-        r_types = {}
-        attrs   = {}
-        for k, v in dct.iteritems():
-            if isinstance(v, RType) : r_types[k] = v
-            else                    : attrs[k]   = v
-        #==
-        T = type.__new__(cls, name, bases, attrs)
-        #==
-        factory = dct.get('factory_name')
-        if factory : r = RClass(factory)
-        else       : r = RClass(T)
-        #==
-        for k, v in r_types.iteritems():
-            r.add_attr(k, v)
-        T.rtype = r
-        #==
-        return T
-
-
-    def __init__(cls, name, bases, dct):
-        super(ReactiveMeta, cls).__init__(name, bases, dct)
-
-
-class Reactive(object):
-    __metaclass__ = ReactiveMeta
-    def __init__(self, **kw):
-        self.__dict__.update(kw)
-        self.rnode = self.wrap(self.rtype, self)
-
-    def wrap(self, rtype, naked_instance):
-        if isinstance(rtype, Index) and rtype.multi  : 
-            assert(len(rtype.children) == 1)
-            for idx, el in enumerate(naked_instance):
-                node = vIndex(rtype, idx)
-                tree.connect(self.wrap(rtype.children[0], el), node)
-        elif isinstance(rtype, Name)  : 
-            node = vName(rtype)
-            assert(len(rtype.children) == 1)
-            naked_instance = rtype.extract(naked_instance)
-            tree.connect(self.wrap(rtype.children[0], naked_instance), node)
-        elif isinstance(rtype, RType) : 
-            node = vValue(rtype, naked_instance)
-            for c in rtype.children:
-                tree.connect(self.wrap(c, naked_instance), node)
-        #==
-        return node
-
-    @classmethod
-    def create(cls, **kw):
-        return cls.rtype.get_default()
+del __Symbol
 
 class Transaction(object):
-    def __init__(self, new, old=None, sender=None, _type=None):
+    def __init__(self, new, old=None, sender=None, _type=ReplaceItem):
         self.new    = new
         self.old    = old
         self.sender = sender
         self.type   = _type
 
+class Error(object):
+    def __init__(self, transaction):
+        self.transaction = transaction
 
-class vValue(tree.Node):
+    def __nonzero__(self):
+        return False
+
+class Value(tree.Node):
     def __init__(self, rtype, naked_instance):
         self.rtype = rtype
         self.naked_instance = naked_instance
         tree.Node.__init__(self)
 
-    def set_value(self, new, old, sender):
-        assert self.naked_instance is old
-        if self.rtype.validate(new):
-            self.naked_instance = new
+    def set_value(self, tr):
+        assert (tr.old is Nothing) or (self.naked_instance == tr.old)
+        if self.rtype.validate(tr.new) : self.modify(tr) #bug on the validate if tr.type is AddItem and rtype not multi
+        else                           : tr = Error(tr); assert False
+        #==
         for p in self.parents:
-            p.post_set_value(new, old, sender)
+            p.post_set_value(tr)
+
+    def modify(self, tr):
+        assert tr.type is ReplaceItem
+        self.naked_instance = tr.new
 
     def get_value(self):
         return self.naked_instance
 
+
+class List(Value):
+    def modify(self, tr):
+        if tr.type is ReplaceItem:
+            #if not self.rtype.validate(tr.new):
+                #return Error(tr)
+            for c in self.children:
+                tree.disconnect(c, self)
+            for c in self.rtype.children:
+                vIndexes = b.wrap(c, tr.new)
+                for vIndex in vIndexes:
+                    tree.connect(vIndex, self)
+            self.naked_instance += tr.new
+        #==
+        elif tr.type is AddItem:
+            assert self.rtype.is_multi_list()
+            #if not self.rtype.validate(self.naked_instance+tr.new):
+                #return Error(tr)
+            n        = len(self.naked_instance)
+            tIndex   = self.rtype.children[0]
+            vIndexes = b.wrap(tIndex, tr.new)
+            for vIndex in vIndexes:
+                tree.connect(vIndex, self)
+                vIndex.idx = vIndex + n
+            self.naked_instance += tr.new
+        else:
+            assert False
+
     def reorder_indexes(self):
+        assert self.rtype.is_multi_list()
         for idx, el in enumerate(self.children):
             el.idx = idx
 
-
-class vName(tree.Node, tree.OneChildMixin):
+class Name(tree.Node, tree.OneChildMixin):
     def __init__(self, name):
         self.name        = name
         self.listeners   = []
@@ -102,13 +90,17 @@ class vName(tree.Node, tree.OneChildMixin):
             return True
         #==
         assert len(self.parents)==1 
-        assert isinstance(self.parents[0], vValue)
-        assert all(isinstance(c, vValue) for c in self.children)
+        assert isinstance(self.parents[0], Value)
+        assert all(isinstance(c, Value) for c in self.children)
         assert self.get_only_child().get_value() is self.extract()
         return True
     
     def extract(self):
         return self.name.extract(self.parents[0].naked_instance)
+
+    def register(self, listener):
+        if listener not in self.listeners:
+            self.listeners.append(listener)
 
     def notify(self, transaction):
         for l in self.listeners:
@@ -120,7 +112,8 @@ class vName(tree.Node, tree.OneChildMixin):
         child.set_value(transaction)
         
     def post_set_value(self, transaction):
-        self.name.set(self.parents[0].naked_instance, transaction.new)
+        if transaction:
+            self.name.set(self.parents[0].naked_instance, transaction.new)
         assert self.invariant() # no warranty once we call notify
         self.notify(transaction)
 
@@ -130,19 +123,9 @@ class vName(tree.Node, tree.OneChildMixin):
         assert self.invariant()
         return result
 
-
-class __Symbol():
-    pass
-
-Nothing = __Symbol()
-RemoveItem = __Symbol()
-
-del __Symbol
-
-
-class vIndex(vName):
+class Index(Name):
     def __init__(self, name, idx):
-        vName.__init__(self, name)
+        Name.__init__(self, name)
         self.idx = idx
 
     def set_value(self, transaction):
@@ -151,7 +134,7 @@ class vIndex(vName):
             tree.disconnect(self, self.parents[0])
             self.parents[0].reorder_indexes()
         else:
-            vName.set_value(self, transaction)
+            Name.set_value(self, transaction)
 
     def extract(self):
         return self.name.extract(self.parents[0].naked_instance, idx=self.idx)

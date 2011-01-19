@@ -10,7 +10,7 @@ class BaseValidator(TypeValidator):
     def validate(self, naked_instance):
         return isinstance(naked_instance, self._class)
 
-class RType(tree.Node):
+class _Type(tree.Node):
     def __init__(self, factory, type_validator=None, tname=None, children=None):
         self.factory        = factory
         self.type_validator = type_validator or BaseValidator(factory)
@@ -28,7 +28,7 @@ class RType(tree.Node):
     def _get_default(self):
         return self.factory()
 
-class RClass(RType):
+class _Class(_Type):
     def invariant(self):
         return all(isinstance(child, Name) for child in self.children)
 
@@ -70,13 +70,13 @@ class Name(tree.Node, tree.OneChildMixin):
         return self.get_only_child().validate(v)
 
 
-class RList(RType):
+class List(_Type):
     def invariant(self):
         return all(isinstance(child, Index) for child in self.children)
 
     def __init__(self, factory=None):
         factory = factory or list
-        RType.__init__(self, factory)
+        _Type.__init__(self, factory)
 
     def _get_default(self):
         sorted_children = sorted(self.children, key = lambda c : c.name)
@@ -109,9 +109,9 @@ class Index(Name):
             return Name.validate(self, naked_instance)
 
 
-class RUnion(RType):
+class Union(_Type):
     def __init__(self, children=None):
-        RType.__init__(self, None, children=children)
+        _Type.__init__(self, None, children=children)
 
     def validate(self, naked_instance):
         return any( s.validate(naked_instance) for s in self.children)
@@ -124,7 +124,7 @@ class RUnion(RType):
             if s.validate(naked_instance):
                 return s
 
-def rtype(_type):
+def _type(_type):
     rtype =  getattr(_type, "rtype")
     print "warning : not reactive type"
-    return rtype if rtype else RType(_type)
+    return rtype if rtype else _Type(_type)
