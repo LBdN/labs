@@ -78,6 +78,9 @@ class List(_Type):
         factory = factory or list
         _Type.__init__(self, factory)
 
+    def is_multi_list(self):
+        return len(self.children)==1 and self.children[0].multi
+
     def _get_default(self):
         sorted_children = sorted(self.children, key = lambda c : c.name)
         return self.factory((c.get_default() for c in sorted_children))

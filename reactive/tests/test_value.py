@@ -49,20 +49,45 @@ def test_meta5():
         radius = t._Type(int)
     class Shape(b.Reactive):
         kind = t.Union(children=[t._Type(Rect), t._Type(Circle)])
+        color = t.Promise('color.ColorRGB')
     s = Shape.create()
 
 
 def test_meta6():
     class Polygon(b.Reactive):
         points  = t.List().add_idx('multi', t._Type(int))
+        #matrix  = t.Interface(t.List().add_idx('16x', t._Type(float))) matrix = implements
         def __repr__(self):
             return str(self.points)
     p = Polygon.create()
     p.rnode.children[0].set_value(v.Transaction([1,2,3], old=v.Nothing))
     p.rnode.children[0].set_value(v.Transaction([1], old=[1,2,3]))
-    p.rnode.children[0].set_value(v.Transaction([5], old=[1], _type=v.AddItem))
+    p.rnode.children[0].set_value(v.Transaction(5, old=[1], _type=v.AddItem))
+    p.rnode.children[0].set_value(v.Transaction(5, old=[1,5], _type=v.RemoveItem))
     assert isinstance(p, Polygon)
     assert hasattr(p, 'points')
     assert isinstance(p.points, list)
     assert all( isinstance(el, int) for el in p.points)
+
+def test_meta7():
+    class Polygon(b.Reactive):
+        points  = t.List().add_idx('multi', t._Type(int))
+        def __repr__(self):
+            return str(self.points)
+    p   = Polygon.create()
+    assert isinstance(p, Polygon)
+    assert hasattr(p, 'points')
+    assert isinstance(p.points, list)
+    assert all( isinstance(el, int) for el in p.points)
+    #==
+    trs = [ v.Transaction([1,2,3], old=[0]),
+            v.Transaction([1], old=[1,2,3]),
+            v.Transaction(5, old=[1], _type=v.AddItem),
+            v.Transaction(5, old=[1,5], _type=v.RemoveItem) ]
+    for tr in trs:
+        p.rnode.children[0].set_value(tr)
+    assert p.points == [1]
+    for tr in reversed(trs):
+        p.rnode.children[0].set_value(tr.reverse())
+    assert p.points == [0]
 

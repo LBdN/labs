@@ -2,18 +2,22 @@ import _value
 import _type 
 from ..data_structure import tree
 
+keywords = ('__interface__', '__rmodule__', '__factory__')
+
 class ReactiveMeta(type):
     def __new__(cls, name, bases, dct):
         print "Allocating", name
         r_types = {}
         attrs   = {}
+        specials= {}
         for k, v in dct.iteritems():
-            if isinstance(v, _type._Type) : r_types[k] = v
-            else                    : attrs[k]   = v
+            if isinstance(v, _type._Type) : r_types[k]  = v
+            elif k in keywords            : specials[k] = v
+            else                          : attrs[k]    = v
         #==
         T = type.__new__(cls, name, bases, attrs)
         #==
-        factory = dct.get('factory_name')
+        factory = specials.get('factory_name')
         if factory : r = _type._Class(factory)
         else       : r = _type._Class(T)
         #==
