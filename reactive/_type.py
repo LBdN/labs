@@ -20,24 +20,25 @@ class _Type(tree.Node):
     def validate(self, naked_instance):
         return self.type_validator.validate(naked_instance)
 
-    def get_default(self):
-        v = self._get_default()
+    def get_default(self, factory=None):
+        factory = factory or self.factory
+        v = self._get_default(factory)
         assert self.validate(v)
         return v
 
-    def _get_default(self):
-        return self.factory()
+    def _get_default(self, factory):
+        return factory()
 
 class _Class(_Type):
     def invariant(self):
         return all(isinstance(child, Name) for child in self.children)
 
-    def _get_default(self):
+    def _get_default(self, factory):
         assert self.invariant()
         kw = {}
         for child in self.children:
             kw[child.name] = child.get_default()
-        return self.factory(**kw)
+        return factory(**kw)
 
     def validate(self, naked_instance):
         assert self.invariant()
@@ -81,9 +82,9 @@ class List(_Type):
     def is_multi_list(self):
         return len(self.children)==1 and self.children[0].multi
 
-    def _get_default(self):
+    def _get_default(self, factory):
         sorted_children = sorted(self.children, key = lambda c : c.name)
-        return self.factory((c.get_default() for c in sorted_children))
+        return factory((c.get_default() for c in sorted_children))
 
     def add_idx(self, idx, rtype):
         i = Index(idx)
@@ -119,7 +120,7 @@ class Union(_Type):
     def validate(self, naked_instance):
         return any( s.validate(naked_instance) for s in self.children)
 
-    def _get_default(self):
+    def _get_default(self, factory):
         return self.children[0].get_default()
 
     def get_active(self, naked_instance):
