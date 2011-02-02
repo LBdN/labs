@@ -14,11 +14,11 @@ class Reader(object):
     def read(self, obj):
         if self.match(obj):
             print "catching %s" %self._type
-            view = obj.get_inactive_views(self)
-            if not view : 
-                view = self._read(obj)
-            obj.set_active_view(self, view)
-            return view
+            #view = obj.get_inactive_views(self)
+            #if not view : 
+            view = self._read(obj)
+            #obj.set_active_view(self, view)
+            return None
         return obj
 
 class MeshReader(Reader):
@@ -41,29 +41,32 @@ class IntReader(Reader):
         self.ctx_qt = ctx_qt
 
     def _read(self, int_value):
-        btn = MyQSpinBox(int_value, self.ctx_qt)
-        self.ctx_qt.layout.addWidget(btn)
-        btn.valueChanged.connect(btn._value_changed)
-        return btn
+        pass
+        #btn = MyQSpinBox(int_value, self.ctx_qt)
+        #btn = MyQSpinBox(int_value)
+        #btn = QSpinBox()
+        #self.ctx_qt.layout.addWidget(btn)
+        #btn.valueChanged.connect(btn._value_changed)
+        #return btn
 
-class MyQSpinBox(QSpinBox):
-    def __init__(self, v, parent):
-        QSpinBox.__init__(self, parent)
-        self.in_change = False
-        self.v = v
+#class MyQSpinBox(QSpinBox):
+    #def __init__(self, v):
+        #QSpinBox.__init__(self)
+        #self.in_change = False
+        #self.v = v
 
-    def _value_changed(self, new_int):
-        if self.in_change:
-            return
-        self.v.set_value(new_int, self, None)
+    #def _value_changed(self, new_int):
+        #if self.in_change:
+            #return
+        #self.v.set_value(new_int, self, None)
 
-    def notify(self, old, new, sender, transaction):
-        if sender is self:
-            return
-        #==
-        self.in_change = True
-        self.setValue(new)
-        self.in_change = False
+    #def notify(self, old, new, sender, transaction):
+        #if sender is self:
+            #return
+        ##==
+        #self.in_change = True
+        #self.setValue(new)
+        #self.in_change = False
 
 class ActionReader(Reader):
     _type = p_base.SpinCamera
@@ -72,17 +75,19 @@ class ActionReader(Reader):
         self.ctx_qt = ctx_qt
 
     def _read(self, int_value):
-        btn = MyQPushButton(int_value, self.ctx_qt)
+        btn = QPushButton('action')
+        import pdb; pdb.set_trace()
         self.ctx_qt.layout.addWidget(btn)
-        btn.clicked.connect(btn._clicked)
+        #btn.clicked.connect(btn._clicked)
+        pass
 
-class MyQPushButton(QPushButton):
-    def __init__(self, v, parent):
-        QPushButton.__init__(self, parent)
-        self.v = v
+#class MyQPushButton(QPushButton):
+    #def __init__(self, v):
+        #QPushButton.__init__(self)
+        #self.v = v
 
-    def _clicked(self):
-        self.v.execute()
+    #def _clicked(self):
+        #self.v.execute()
 
 class NodeReader(Reader):
 
@@ -126,6 +131,7 @@ def read_all(to_read, readers):
         el = to_read.pop()
         for r in readers:
             res = r.read(el)
+            print r,"::" ,el," -> " , res
             if   res is None : break 
             elif res != el   : to_read.append(res)
         max -= 1

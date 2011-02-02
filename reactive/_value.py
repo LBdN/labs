@@ -1,5 +1,5 @@
 from ..data_structure import tree
-from transaction import Error, ReplaceItem
+import transaction  as t 
 
 
 class Value(tree.Node):
@@ -8,21 +8,51 @@ class Value(tree.Node):
         self.naked_instance = naked_instance
         tree.Node.__init__(self)
 
+    def __getitem__(self, key):
+        for c in self.children:
+            if c.name.name == key:
+                return c
+
     def set_value(self, tr):
         assert (self.naked_instance == tr.old)
-        proposed_value = tr.proposed_value()
+        proposed_value = tr.proposed_value(self.naked_instance)
         if not self.rtype.validate(proposed_value) : 
-            tr = Error(tr); assert False
+            tr = t.Error(tr); assert False
         tr.do(self)
         assert self.rtype.validate(self.naked_instance)
+        assert self.naked_instance == proposed_value
         #==
         for p in self.parents:
             p.post_set_value(tr)
 
+    def replaceT(self, new, sender):
+        return t.Replace(new, self.naked_instance, sender)
+
     def get_value(self):
         return self.naked_instance
 
+
 class List(Value):
+
+    def __getitem__(self, key):
+        if not self.rtype.is_multi_list():
+            return Value.__getitem__(self, key)
+        #==
+        c = self.children[key]
+        return c
+
+    def replaceT(self, new, sender):
+        return t.Replace(new, old=self.naked_instance[:], sender=sender)
+
+    def appendT(self, new, sender):
+        return t.AppendItem(new, old=self.naked_instance[:], sender=sender)
+
+    def removeT(self, idx, sender):
+        return t.RemoveItem(idx, old=self.naked_instance[:], sender=sender)
+
+    def insertT(self, idx, val, sender):
+        return t.InsertItem((idx, val), old=self.naked_instance[:], sender=sender)
+
     def reorder_indexes(self):
         assert self.rtype.is_multi_list()
         for idx, el in enumerate(self.children):
@@ -33,6 +63,33 @@ class Name(tree.Node, tree.OneChildMixin):
         self.name        = name
         self.listeners   = []
         tree.Node.__init__(self)
+
+    def __getitem__(self, key):
+        return self.get_only_child()[key]
+
+    def replace(self, new, sender):
+        value = self.get_only_child()
+        t = value.replaceT(new, sender)
+        self.set_value(t)
+        return t
+
+    def insert(self, *args):
+        value = self.get_only_child()
+        t = value.insertT(*args)
+        self.set_value(t)
+        return t
+
+    def append(self, *args):
+        value = self.get_only_child()
+        t = value.appendT(*args)
+        self.set_value(t)
+        return t
+
+    def remove(self, *args):
+        value = self.get_only_child()
+        t = value.removeT(*args)
+        self.set_value(t)
+        return t
 
     def invariant(self):
         if not self.children or not self.parents:
@@ -61,9 +118,10 @@ class Name(tree.Node, tree.OneChildMixin):
         child.set_value(transaction)
         
     def post_set_value(self, transaction):
-        if transaction and isinstance(transaction, ReplaceItem):
+        if transaction and isinstance(transaction, t.Replace):
             self.name.set(self.parents[0].naked_instance, transaction.new)
-            # no need for the other case because list are shared via reference.
+            # no need for the other case 
+            # because list are shared via reference.
         assert self.invariant() # no warranty once we call notify
         self.notify(transaction)
 
@@ -72,6 +130,7 @@ class Name(tree.Node, tree.OneChildMixin):
         result    = child.get_value()
         assert self.invariant()
         return result
+
 
 class Index(Name):
     def __init__(self, name, idx):

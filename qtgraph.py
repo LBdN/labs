@@ -74,7 +74,8 @@ class GraphWidget(QtGui.QGraphicsView):
 
     def scaleView(self, scaleFactor):
         factor = self.matrix().scale(scaleFactor, scaleFactor).mapRect(QtCore.QRectF(0, 0, 1, 1)).width()
-        if factor < 0.07 or factor > 100:
+        print factor
+        if factor < 0.07 or factor > 1.6:
             return
         self.scale(scaleFactor, scaleFactor) 
 

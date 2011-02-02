@@ -48,7 +48,7 @@ class QTTest(QMainWindow):
         self.view = qtgraph.GraphWidget()
         self.layout.addWidget(self.view)
         centralWidget = QWidget(self)
-        centralWidget.setLayout(self.layout)
+        #centralWidget.setLayout(self.layout)
         self.setCentralWidget(centralWidget)
         #==
 
@@ -116,4 +116,5 @@ if __name__ == '__main__':
     to_read   = p_base.default(taskMgr, base.camera, Task)
     reader.read_all(to_read, readers)
 
+    form.centralWidget().setLayout(form.layout)
     app.exec_()

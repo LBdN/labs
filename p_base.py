@@ -1,6 +1,5 @@
-import tree
+from data_structure import tree
 import utils
-import _type
 #==
 from collections import defaultdict
 from math        import cos, sin, radians
@@ -118,7 +117,7 @@ class Mesh3d(Data):
 
 def default(taskMgr, camera, Task):
         d = [ Mesh3d("models/environment", (0.25,0.25,0.25), (-8,42,0)),
-              Int(7), 
+               #Int(7), 
               FakeAction(None), 
               SpinCamera(taskMgr, camera, Task)]
         return d

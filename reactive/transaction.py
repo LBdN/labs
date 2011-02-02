@@ -6,12 +6,17 @@ class Transaction(object):
         self.new    = new
         self.old    = old
         self.sender = sender
+        assert self.sender
         assert self.old is not None or isinstance(self, AppendItem)
 
-class ReplaceItem(Transaction):
+    def __repr__(self):
+        return "%s(new:%s old:%s sender:%s)" \
+                %( str(type(self)), self.new, self.old, self.sender)
+
+class Replace(Transaction):
     def reverse(self):
         new, old = self.old, self.new
-        return Transaction(self.old, old=self.new, sender=self.sender)
+        return Replace(self.old, old=self.new, sender=self.sender)
 
     def proposed_value(self, naked_instance):
         assert naked_instance == self.old
@@ -26,9 +31,10 @@ class ReplaceItem(Transaction):
             for vIndex in vIndexes:
                 tree.connect(vIndex, rvalue)
         #==
-        assert len(rvalue.children)==len(rvalue.naked_instance)
+        if isinstance(rvalue.naked_instance, list):
+            assert len(rvalue.children)==len(rvalue.naked_instance)
 
-class Insert(Transaction):
+class InsertItem(Transaction):
     def reverse(self):
         idx, val = self.new
         new_old  = self.old[:]
@@ -43,16 +49,18 @@ class Insert(Transaction):
         return proposed_value
 
     def do(self, rvalue):
-        assert False
         #==
         assert rvalue.rtype.is_multi_list()
-        n        = len(rvalue.naked_instance)
         tIndex   = rvalue.rtype.children[0]
-        vIndexes = b.wrap(tIndex, [self.new])
-        rvalue.naked_instance.append(self.new) #modification in place
-        for vIndex in vIndexes:
-            vIndex.idx = vIndex.idx + n
-            tree.connect(vIndex, rvalue)
+        idx, val = self.new
+        vIndexes = b.wrap(tIndex, [val])
+        rvalue.naked_instance.insert(idx, val) #modification in place
+        assert len(vIndexes) == 1
+        vIndex     = vIndexes[0]
+        vIndex.idx = idx
+        for c in rvalue.children[idx:]:
+            c.idx += 1
+        tree.connect(vIndex, rvalue)
         #==
         assert len(rvalue.children)==len(rvalue.naked_instance)
 
@@ -86,7 +94,7 @@ class RemoveItem(Transaction):
     def reverse(self):
         new_old  = self.old[:]
         new      = new_old.pop(self.new)
-        return Insert(self.new, old=new_old, sender=self.sender)
+        return InsertItem((self.new, new), old=new_old, sender=self.sender)
 
     def proposed_value(self, naked_instance):
         assert naked_instance == self.old
