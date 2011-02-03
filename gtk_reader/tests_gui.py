@@ -1,9 +1,7 @@
 import context
 
 import os
-from gamr7_lib.ppath import Ppath
-base_dir = Ppath(__file__).realpath().dirname()
-os.environ["GTK2_RC_FILES"] = base_dir / "../../../app/meta_appli/resources/themes/gtk-2.0/gtkrc"
+os.environ["GTK2_RC_FILES"] = os.path.join(os.path.dirname(os.path.realpath(__file__)),  "../../../app/meta_appli/resources/themes/gtk-2.0/gtkrc")
 from gamr7_lib.exception_hook import install_pdb_exception_hook
 from gamr7_lib.gui import helpers_gui
 #from gamr7_lib.full_edit import gui

@@ -1,4 +1,4 @@
-from ..data_structure import tree
+from data_structure import tree
 import transaction  as t 
 
 
@@ -6,6 +6,7 @@ class Value(tree.Node):
     def __init__(self, rtype, naked_instance):
         self.rtype = rtype
         self.naked_instance = naked_instance
+        assert naked_instance is not None
         tree.Node.__init__(self)
 
     def __getitem__(self, key):
@@ -17,7 +18,7 @@ class Value(tree.Node):
         assert (self.naked_instance == tr.old)
         proposed_value = tr.proposed_value(self.naked_instance)
         if not self.rtype.validate(proposed_value) : 
-            tr = t.Error(tr); assert False
+            tr = t.Error(tr); assert False, tr
         tr.do(self)
         assert self.rtype.validate(self.naked_instance)
         assert self.naked_instance == proposed_value
@@ -31,6 +32,11 @@ class Value(tree.Node):
     def get_value(self):
         return self.naked_instance
 
+    def is_name(self):
+        return False
+
+    def __repr__(self):
+        return repr(self.rtype)
 
 class List(Value):
 
@@ -63,6 +69,9 @@ class Name(tree.Node, tree.OneChildMixin):
         self.name        = name
         self.listeners   = []
         tree.Node.__init__(self)
+
+    def __repr__(self):
+        return "value.Name: %s" %repr(self.name)
 
     def __getitem__(self, key):
         return self.get_only_child()[key]
@@ -104,6 +113,16 @@ class Name(tree.Node, tree.OneChildMixin):
     def extract(self):
         return self.name.extract(self.parents[0].naked_instance)
 
+    def set(self, transaction):
+        if isinstance(transaction, t.Replace):
+            self.name.set(self.parents[0].naked_instance, transaction.new)
+        else:
+            pass
+            # !!! Tricky !!!
+            # no need for the other case 
+            # because list are shared via reference.
+            # hence processed by the value (aka children[0])
+
     def register(self, listener):
         if listener not in self.listeners:
             self.listeners.append(listener)
@@ -118,10 +137,8 @@ class Name(tree.Node, tree.OneChildMixin):
         child.set_value(transaction)
         
     def post_set_value(self, transaction):
-        if transaction and isinstance(transaction, t.Replace):
-            self.name.set(self.parents[0].naked_instance, transaction.new)
-            # no need for the other case 
-            # because list are shared via reference.
+        if not isinstance(transaction, t.Error):
+            self.set(transaction)
         assert self.invariant() # no warranty once we call notify
         self.notify(transaction)
 
@@ -131,11 +148,18 @@ class Name(tree.Node, tree.OneChildMixin):
         assert self.invariant()
         return result
 
+    def is_name(self):
+        return True
 
 class Index(Name):
     def __init__(self, name, idx):
         Name.__init__(self, name)
         self.idx = idx
+
+    def set(self, transaction):
+        if not isinstance(self.get_only_child(), List):
+            self.name.set(self.parents[0].naked_instance, transaction.new, idx=self.idx)
+        assert self.invariant() # no warranty once we call notify
 
     def extract(self):
         return self.name.extract(self.parents[0].naked_instance, idx=self.idx)

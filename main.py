@@ -1,9 +1,14 @@
 # -*- coding: UTF-8 -*-
+import gtk
+del gtk
+
 from PyQt4.QtCore import *
 from PyQt4.QtGui  import *
 
 P3D_WIN_WIDTH  = 800
 P3D_WIN_HEIGHT = 500
+
+import qtgraph
 
 from direct.showbase.DirectObject import *
 from pandac.PandaModules          import WindowProperties
@@ -20,7 +25,6 @@ loadPrcFileData("", "window-type none")
 
 import direct.directbase.DirectStart
 
-import qtgraph
 #----------------------------------------------------------------------
 # PyQt GUI (taken from dinoint's 'post)
 #----------------------------------------------------------------------
@@ -36,9 +40,6 @@ class QTTest(QMainWindow):
         self.pandaContainer.setGeometry(0,0,P3D_WIN_WIDTH,P3D_WIN_HEIGHT)
         #self.pandaContainer.setSizePolicy(QSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed))
 
-        #hellobutton = Qt.QPushButton("Say 'Hello world!'",None)
-        ## And connect the action "sayHello" to the event "button has been clicked"
-        #self.connect(hellobutton, Qt.SIGNAL("clicked()"), sayHello)
 
         #self.lineedit = QLineEdit("Proba ugnjezdenog prikaza...")
 
@@ -51,6 +52,10 @@ class QTTest(QMainWindow):
         #centralWidget.setLayout(self.layout)
         self.setCentralWidget(centralWidget)
         #==
+        #hellobutton = QPushButton("Say 'Hello world!'",None)
+        ## And connect the action "sayHello" to the event "button has been clicked"
+        #self.connect(hellobutton, Qt.SIGNAL("clicked()"), sayHello)
+        #self.layout.addWidget(hellobutton)
 
         # this basically creates an idle task
         timer =  QTimer(self)
@@ -113,7 +118,9 @@ if __name__ == '__main__':
     ctx_panda = ContextPanda(loader, render)
     ctx_qt    = form
     readers   = reader.reader_prepare(ctx_panda, ctx_qt)
-    to_read   = p_base.default(taskMgr, base.camera, Task)
+    to_read   = p_base.default_obj(taskMgr, base.camera, Task)
+    for v, ctx in to_read:
+        ctx['layout'] = ctx_qt.layout
     reader.read_all(to_read, readers)
 
     form.centralWidget().setLayout(form.layout)

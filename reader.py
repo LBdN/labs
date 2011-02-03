@@ -9,95 +9,100 @@ from PyQt4.QtCore import *
 
 class Reader(object):
     def match(self, obj):
-        return isinstance(obj, self._type)
+        return isinstance(obj.get_value(), self._type)
 
-    def read(self, obj):
-        if self.match(obj):
-            print "catching %s" %self._type
-            #view = obj.get_inactive_views(self)
-            #if not view : 
-            view = self._read(obj)
-            #obj.set_active_view(self, view)
-            return None
-        return obj
+    def read(self, obj, ctx):
+        assert obj.is_name() or obj.parents == []
+        if not self.match(obj):
+            return obj, ctx
+        #==
+        print "catching %s" %self._type
+        view, new_ctx = self._read(obj, ctx)
+        return view, new_ctx
 
 class MeshReader(Reader):
-    _type = p_base.Mesh3d
+    _type = p_base.Mesh
 
     def __init__(self, ctx_panda):
         self.ctx_panda = ctx_panda
 
-    def _read(self, mesh):
-        path, scale, pos = mesh.value
-        obj = self.ctx_panda.load(path)
-        obj.setScale(*scale)
-        obj.setPos(*pos)
-        return obj
+    def _read(self, mesh_node, ctx):
+        mesh = mesh_node.get_value()
+        obj = self.ctx_panda.load(mesh.path)
+        obj.setScale((mesh.scale, mesh.scale,mesh.scale))
+        obj.setPos(*mesh.pos)
+        Scaler(obj, mesh_node['scale'])
+        for idx, c in enumerate(mesh_node['pos'].children[0].children):
+            Mover(obj, c, idx)
+        return make_scope(mesh_node, ctx)
+
+class Scaler(object):
+    def __init__(self, mesh, scale_node):
+        self.mesh = mesh
+        scale_node.register(self)
+
+    def notify(self, transaction):
+        scale = [transaction.new]*3
+        self.mesh.setScale(*scale)
+
+class Mover(object):
+    def __init__(self, mesh, pos_node, idx):
+        self.mesh = mesh
+        pos_node.register(self)
+        self.idx = idx
+
+    def notify(self, transaction):
+        pos = self.mesh.getPos()
+        pos[self.idx] = transaction.new
+        self.mesh.setPos(pos)
+
+class ListReader(Reader):
+    _type = list
+
+    def _read(self, list_node, ctx):
+        assert list_node.is_name()
+        return make_scope(list_node, ctx)
+
+def make_scope(node, ctx):
+    hGroupBox = QGroupBox(str(node))
+    layout = QVBoxLayout()
+    hGroupBox.setLayout(layout)
+    ctx['layout'].addWidget(hGroupBox)
+    if node.is_name(): children = node.children[0].children
+    else             : children = node.children
+    #==
+    return children, {'layout' : layout}
 
 class IntReader(Reader):
-    _type = p_base.Int
+    _type = float
 
     def __init__(self, ctx_qt):
         self.ctx_qt = ctx_qt
 
-    def _read(self, int_value):
-        pass
-        #btn = MyQSpinBox(int_value, self.ctx_qt)
-        #btn = MyQSpinBox(int_value)
-        #btn = QSpinBox()
-        #self.ctx_qt.layout.addWidget(btn)
-        #btn.valueChanged.connect(btn._value_changed)
-        #return btn
+    def _read(self, int_value, ctx):
+        assert int_value.is_name()
+        #==
+        layout = ctx['layout']
+        label  = QLabel(str(int_value))
+        spin_box    = QDoubleSpinBox()
+        layout.addWidget(label)
+        layout.addWidget(spin_box)
+        #==
+        spin_box.setValue(int_value.get_value())
+        spin_box.valueChanged.connect(lambda x: int_value.replace(x, True))
+        #==
+        return None, None
 
-#class MyQSpinBox(QSpinBox):
-    #def __init__(self, v):
-        #QSpinBox.__init__(self)
-        #self.in_change = False
-        #self.v = v
-
-    #def _value_changed(self, new_int):
-        #if self.in_change:
-            #return
-        #self.v.set_value(new_int, self, None)
-
-    #def notify(self, old, new, sender, transaction):
-        #if sender is self:
-            #return
-        ##==
-        #self.in_change = True
-        #self.setValue(new)
-        #self.in_change = False
-
-class ActionReader(Reader):
-    _type = p_base.SpinCamera
-
-    def __init__(self, ctx_qt):
-        self.ctx_qt = ctx_qt
-
-    def _read(self, int_value):
-        btn = QPushButton('action')
-        import pdb; pdb.set_trace()
-        self.ctx_qt.layout.addWidget(btn)
-        #btn.clicked.connect(btn._clicked)
-        pass
-
-#class MyQPushButton(QPushButton):
-    #def __init__(self, v):
-        #QPushButton.__init__(self)
-        #self.v = v
-
-    #def _clicked(self):
-        #self.v.execute()
 
 class NodeReader(Reader):
+    _type = p_base.Node
 
-    _type = p_base.Data
     def __init__(self, ctx_qt):
         self.ctx_qt = ctx_qt
         self.graph  = qtgraph.Graph(ctx_qt.view)
         self.done   = False
 
-    def _read(self, any_val):
+    def _read(self, any_val, ctx):
         if self.done :
             return any_val
         else:
@@ -115,12 +120,12 @@ class NodeReader(Reader):
                 nodes.append(n)
         #r = qtgraph.getRect(nodes)
         #self.graph.centerScene(r)
-        return any_val
+        return None, ctx
 
 def reader_prepare(ctx_panda, ctx_qt):
     r = []
     r.append(MeshReader(ctx_panda))
-    r.append(ActionReader(ctx_qt))
+    r.append(ListReader())
     r.append(IntReader(ctx_qt))
     r.append(NodeReader(ctx_qt))
     return r
@@ -128,10 +133,21 @@ def reader_prepare(ctx_panda, ctx_qt):
 def read_all(to_read, readers):
     max = 100
     while to_read and max :
-        el = to_read.pop()
-        for r in readers:
-            res = r.read(el)
-            print r,"::" ,el," -> " , res
-            if   res is None : break 
-            elif res != el   : to_read.append(res)
-        max -= 1
+        el, ctx = to_read.pop()
+        if isinstance(el, list):
+            for sub_el in el :
+                r= read_one(sub_el, ctx, readers)
+                if r is not None :
+                    to_read.append(r)
+        else:
+            r= read_one(el, ctx, readers)
+            if r is not None :
+                to_read.append(r)
+
+def read_one(el, ctx, readers):
+    new_els = []
+    for r in readers:
+        res, nctx = r.read(el, ctx)
+        print "%s :: %s -> %s" %(r, el, res)
+        if   res is None : return None 
+        elif res != el   : return res, nctx

@@ -1,4 +1,5 @@
-from ..data_structure import tree
+from data_structure import tree
+from pprint import pprint as pp
 
 class TypeValidator(object):
     def validate(self, naked_instance):
@@ -7,10 +8,14 @@ class TypeValidator(object):
 class BaseValidator(TypeValidator):
     def __init__(self, _class):
         self._class = _class
+    def __repr__(self):
+        return str(self._class)
     def validate(self, naked_instance):
+        print "validating %s %s" %(naked_instance, self)
         return isinstance(naked_instance, self._class)
 
 class _Type(tree.Node):
+
     def __init__(self, factory, type_validator=None, tname=None, children=None):
         self.factory        = factory
         self.type_validator = type_validator or BaseValidator(factory)
@@ -29,6 +34,9 @@ class _Type(tree.Node):
     def _get_default(self, factory):
         return factory()
 
+    def __repr__(self):
+        return str(self.factory)
+
 class _Class(_Type):
     def invariant(self):
         return all(isinstance(child, Name) for child in self.children)
@@ -38,6 +46,7 @@ class _Class(_Type):
         kw = {}
         for child in self.children:
             kw[child.name] = child.get_default()
+        pp(kw)
         return factory(**kw)
 
     def validate(self, naked_instance):
@@ -62,7 +71,11 @@ class Name(tree.Node, tree.OneChildMixin):
     def set(self, inst, value):
         setattr(inst, self.name, value)
 
+    def __repr__(self):
+        return str(self.name)
+
     def get_default(self):
+        pp("get_default %s" %self)
         ttype = self.get_only_child()
         return ttype.get_default()
 
@@ -92,6 +105,12 @@ class List(_Type):
         tree.connect(i, self) 
         return self
 
+    def add_idxs(self, rtypes):
+        for idx, rtype in enumerate(rtypes):
+            self.add_idx(idx, rtype)
+        return self
+
+
 class Index(Name):
     def __init__(self, idx):
         assert (isinstance(idx, int) and idx>=0) or idx == "multi"
@@ -100,10 +119,17 @@ class Index(Name):
 
     def extract(self, inst, idx=None):
         assert (self.multi and idx is not None) or \
-               (idx and not self.multi) 
+               (idx is None and not self.multi) 
         #==
         if self.multi : return inst[idx]
         else          : return inst[self.name]
+
+    def set(self, inst, value, idx=None):
+        assert not self.multi or idx is not None
+        if not self.multi:
+            Name.set(self, inst, value)
+        else:
+            inst[idx] = value
 
     def validate(self, naked_instance):
         if self.multi:
@@ -128,7 +154,7 @@ class Union(_Type):
             if s.validate(naked_instance):
                 return s
 
-def _type(_type):
+def Rtype(_type):
     rtype =  getattr(_type, "rtype")
     print "warning : not reactive type"
     return rtype if rtype else _Type(_type)

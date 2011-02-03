@@ -1,5 +1,5 @@
 import _base as b
-from ..data_structure import tree
+from data_structure import tree
 
 class Transaction(object):
     def __init__(self, new, old=None, sender=None):
@@ -8,6 +8,9 @@ class Transaction(object):
         self.sender = sender
         assert self.sender
         assert self.old is not None or isinstance(self, AppendItem)
+        #==
+        self.applied_on = None
+        self.vnames     = None
 
     def __repr__(self):
         return "%s(new:%s old:%s sender:%s)" \
@@ -105,7 +108,7 @@ class RemoveItem(Transaction):
     def do(self, rvalue):
         assert rvalue.rtype.is_multi_list()
         c = rvalue.children[self.new]
-        tree.disconnect(c.get_only_child(), c)
+        #tree.disconnect(c.get_only_child(), c) #not necessary
         tree.disconnect(c, rvalue)
         del rvalue.naked_instance[self.new]
         rvalue.reorder_indexes()
@@ -118,6 +121,9 @@ class Error(object):
 
     def __nonzero__(self):
         return False
+
+    def __repr__(self):
+        return repr(self.transaction)
 
     def do(self, rvalue):
         pass

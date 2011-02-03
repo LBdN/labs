@@ -36,7 +36,7 @@ class Node(object):
         self.parents  = []
         self.cargo    = cargo
         #==
-        print self, children
+        #print self, children
         if children:
             for c in children:
                 connect(c, self)

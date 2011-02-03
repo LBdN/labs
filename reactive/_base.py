@@ -1,12 +1,11 @@
 import _value 
 import _type 
-from ..data_structure import tree
+from data_structure import tree
 
 keywords = ('__interface__', '__rmodule__', '__factory__')
 
 class ReactiveMeta(type):
     def __new__(cls, name, bases, dct):
-        print "Allocating", name
         r_types = {}
         attrs   = {}
         specials= {}
@@ -44,9 +43,10 @@ class Reactive(object):
     def create(cls, **kw):
         return cls.rtype.get_default()
 
+rvalue_d = {}
+
 def wrap(rtype, naked_instance):
-    if hasattr(naked_instance,"rnode"):
-        return [naked_instance.rnode]
+    assert naked_instance is not None
     #==
     if isinstance(rtype, _type.Index) and rtype.multi  : 
         assert(len(rtype.children) == 1)
@@ -65,17 +65,26 @@ def wrap(rtype, naked_instance):
         for vName in vNames:
             tree.connect(vName, nodes[0])
     elif isinstance(rtype, _type.List) : 
-        nodes = [_value.List(rtype, naked_instance)]
-        for c in rtype.children:
-            vNames = wrap(c, naked_instance)
-            for vName in vNames:
-                tree.connect(vName, nodes[0])
+        assert isinstance(naked_instance, list)
+        key    = id(naked_instance)
+        rvalue = rvalue_d.get(key)
+        if rvalue:
+           return [rvalue]
+        else:
+            nodes = [_value.List(rtype, naked_instance)]
+            for c in rtype.children:
+                vNames = wrap(c, naked_instance)
+                for vName in vNames:
+                    tree.connect(vName, nodes[0])
     elif isinstance(rtype, _type._Type) : 
-        nodes = [_value.Value(rtype, naked_instance)]
-        for c in rtype.children:
-            vNames = wrap(c, naked_instance)
-            for vName in vNames:
-                tree.connect(vName, nodes[0])
+        if hasattr(naked_instance,"rnode"):
+            nodes = [naked_instance.rnode]
+        else:
+            nodes = [_value.Value(rtype, naked_instance)]
+            for c in rtype.children:
+                vNames = wrap(c, naked_instance)
+                for vName in vNames:
+                    tree.connect(vName, nodes[0])
     #==
     return nodes
 
