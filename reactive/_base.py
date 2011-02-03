@@ -1,6 +1,6 @@
 import _value 
 import _type 
-from data_structure import tree
+from ..data_structure import tree
 
 keywords = ('__interface__', '__rmodule__', '__factory__')
 

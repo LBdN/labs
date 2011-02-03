@@ -48,7 +48,7 @@ def test_meta5():
     class Circle(b.Reactive):
         radius = t._Type(int)
     class Shape(b.Reactive):
-        kind = t.Union(children=[t._Type(Rect), t._Type(Circle)])
+        kind = t.Union(children=[t.Rtype(Rect), t.Rtype(Circle)])
     s = Shape.create()
 
 
@@ -104,7 +104,7 @@ def test_meta8():
     class Circle(b.Reactive):
         radius = t._Type(int)
     class Polygon(b.Reactive):
-        points  = t.List().add_idx('multi', t.Union(children=[t._Type(Rect), t._Type(Circle)]))
+        points  = t.List().add_idx('multi', t.Union(children=[t.Rtype(Rect), t.Rtype(Circle)]))
         def __repr__(self):
             return str(self.points)
     p   = Polygon.create()
@@ -139,7 +139,7 @@ def test_meta9():
     class Circle(b.Reactive):
         radius = t._Type(int)
     class Polygon(b.Reactive):
-        points  = t.List().add_idx('multi', t.Union(children=[t._Type(Rect), t._Type(Circle)]))
+        points  = t.List().add_idx('multi', t.Union(children=[t.Rtype(Rect), t.Rtype(Circle)]))
         def __repr__(self):
             return str(self.points)
     p   = Polygon.create()

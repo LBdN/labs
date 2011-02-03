@@ -121,8 +121,8 @@
               #SpinCamera(taskMgr, camera, Task)]
         #return d
 
-from reactive import _base as b
-from reactive import _type as t
+from ..reactive import _base as b
+from ..reactive import _type as t
 
 class Rect(b.Reactive):
     width  = t._Type(int)

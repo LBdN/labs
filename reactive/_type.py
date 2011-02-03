@@ -1,5 +1,5 @@
-from data_structure import tree
-from pprint import pprint as pp
+from ..data_structure import tree
+#from pprint import pprint as pp
 
 class TypeValidator(object):
     def validate(self, naked_instance):
@@ -46,7 +46,7 @@ class _Class(_Type):
         kw = {}
         for child in self.children:
             kw[child.name] = child.get_default()
-        pp(kw)
+        #pp(kw)
         return factory(**kw)
 
     def validate(self, naked_instance):
@@ -75,7 +75,7 @@ class Name(tree.Node, tree.OneChildMixin):
         return str(self.name)
 
     def get_default(self):
-        pp("get_default %s" %self)
+        #pp("get_default %s" %self)
         ttype = self.get_only_child()
         return ttype.get_default()
 

@@ -1,5 +1,5 @@
 import _base as b
-from data_structure import tree
+from ..data_structure import tree
 
 class Transaction(object):
     def __init__(self, new, old=None, sender=None):
