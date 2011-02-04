@@ -107,7 +107,8 @@ class ContextPanda(object):
         obj.reparentTo(self.render)
         return obj
 
-if __name__ == '__main__':
+
+def main():
     world = PandaPseudoWindow()
     app   = QApplication(sys.argv)
     form  = QTTest(world.step)
