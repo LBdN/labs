@@ -55,12 +55,12 @@ def tri_gen(ps):
 
 def test_trigo(_max_pol, _max_side, _max_dist):
     # generate polys
-    rp = (random_polygon2(_max_side, _max_dist) for i in range(_max_pol))
+    rp = (random_polygon(_max_side, _max_dist) for i in range(_max_pol))
     return all(fvector.is_ccw(fvector.convert_vec(p)) == so.is_a_trigo_shape(p) for p in rp)
 
 def test_convex(_max_pol, _max_side, _max_dist):
     # generate polys
-    rp = (random_polygon2(_max_side, _max_dist) for i in range(_max_pol))
+    rp = (random_polygon(_max_side, _max_dist) for i in range(_max_pol))
     return all(fvector.is_convex(fvector.convert_vec(p)) == so.is_a_convex_shape(p) for p in rp)
 
 def test_area(): #todo

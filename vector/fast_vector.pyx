@@ -92,12 +92,6 @@ cdef class Line:
         self.origin = origin
         self.direction = direction
 
-cdef connect(Segment before, Segment after):
-    before.after = after
-    after.before = before
-    #==
-    before.invariant()
-    after.invariant()
 
 cdef class Segment:
     cdef readonly Vector start, end
@@ -110,16 +104,16 @@ cdef class Segment:
 
     def invariant(self):
         #==
-        assert not before or self.start  == before.end
-        assert not after  or after.start == self.end
+        assert not self.before or self.start  == self.before.end
+        assert not self.after  or self.after.start == self.end
 
     cpdef Line to_line(self):
         return Line(self.start, self.end - self.start)
 
     cpdef bool in_bbox(self, Vector v):
         bl, tr = bbox([self.start, self.end])
-        return (v.x >= bl.x and v.x =< tr.x) and \
-               (v.y >= bl.y and v.y =< tr.y) 
+        return (v.x >= bl.x and v.x <= tr.x) and \
+               (v.y >= bl.y and v.y <= tr.y) 
 
     cpdef tuple split(self, Vector v):
         until_v = Segment(self.start, v) 
@@ -139,6 +133,13 @@ cdef class Segment:
         #==
         return False
 
+cdef connect(Segment before, Segment after):
+    before.after = after
+    after.before = before
+    #==
+    before.invariant()
+    after.invariant()
+
 cpdef Vector segm_intersect(Segment s1, Segment s2):
     cdef Line l1  = s1.to_line()
     cdef Line l2  = s2.to_line()
@@ -146,7 +147,7 @@ cpdef Vector segm_intersect(Segment s1, Segment s2):
     if s1.in_bbox(p):
         return p
 
-cdef Vector line_intersect(Line l0, Line l2):
+cdef Vector line_intersect(Line l1, Line l2):
     cdef float d = det(l1.direction, l2.direction)
     cdef float d2
     cdef Vector o1o2
@@ -160,15 +161,15 @@ cdef Vector line_intersect(Line l0, Line l2):
     if d2 == 0 :
         return l1.origin
 
-def bool poly_self_intersect(list ps)
-    cdef Vector p
-    for p1, p2 in itertools.combinations(ps, 2):
-        p = segm_intersect(p1, p2):
-        if not p : continue
-        #==
-        if not p1.ends_of(p) and not p2.ends_of(p)
-            return True
-    return False
+#cpdef bool poly_self_intersect(list ps):
+    #cdef Vector p
+    #for p1, p2 in itertools.combinations(ps, 2):
+        #p = segm_intersect(p1, p2)
+        #if not p : continue
+        ##==
+        #if not p1.ends_of(p) and not p2.ends_of(p)
+            #return True
+    #return False
 
 cpdef Vector from_points(tuple p1, tuple p2):
     return Vector(p1[0]-p2[0], p1[1] - p2 [1], 0)

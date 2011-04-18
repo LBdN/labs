@@ -127,7 +127,7 @@ class Index(Name):
     def set(self, inst, value, idx=None):
         assert not self.multi or idx is not None
         if not self.multi:
-            Name.set(self, inst, value)
+            inst[self.name] = value
         else:
             inst[idx] = value
 
