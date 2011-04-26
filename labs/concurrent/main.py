@@ -2,6 +2,7 @@ import labs.data_structure.tree as tree
 from collections import deque
 # from multiprocessing import Process, Queue, current_process, freeze_support
 context  ={}
+from itertools import groupby
 
 # any new connection imply recomputation of the graph topo sort
 # any params change imply an update of the task linked to the operation
@@ -18,10 +19,12 @@ class Operation(tree.Node):
 def bfs(root):
     todo = [(0, [root])]
     while todo:
-        node = todo.pop()
-        yield node
-        idx = node[0] + 1
-        todo.append((idx, node.children))
+        _tuple = todo.pop(0)
+        idx, nodes = _tuple
+        nidx  = idx + 1
+        for n in nodes:
+            yield idx, n
+            todo.append((nidx, n.children))
 
 def indexize(node, idx, visited):
     t = visited.get(node)
@@ -34,12 +37,16 @@ def indexize(node, idx, visited):
 def topo_sort(root):
     visited = {}
     for tupl in bfs(root):
-        idx, nodes = tupl
-        for n in nodes:
-            indexize(n, idx, visited)
+        idx, n= tupl
+        indexize(n, idx, visited)
     #==
     task_list = sorted(visited.values(), key=lambda n : n[0]) 
-    return task_list
+    #==
+    result = []
+    for key, group in groupby(task_list, lambda x: x[0]):
+        _list = [ el[1] for el in group ]
+        result.append((key, _list))
+    return result
 
 
 class Worker(object):

@@ -4,11 +4,12 @@ from labs.data_structure import tree
 import random
 
 def gen_el(i):
-    o = m.Operation('', str(i),  {})
+    o = tree.Node(cargo=i)
+    #o = m.Operation('', str(i),  '')
     return o
 
-def setup_el():
-    elements = map(lambda i : gen_el(i), range(5))
+def setup_el(nb):
+    elements = map(lambda i : gen_el(i), range(nb))
     root     = elements[0]
     for idx, el in enumerate(elements):
         rst = elements[:idx]
@@ -28,10 +29,11 @@ def setup_el():
     #==
     return root
 
-def test_topo():
-    r = setup_el()
+def test_topo(nb):
+    r = setup_el(nb)
+    #print tree.prettyprint(r, 4)
     l = m.topo_sort(r)
-    print l
+    #print l
     #m.
 
 
