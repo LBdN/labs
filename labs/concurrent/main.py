@@ -1,53 +1,64 @@
 import labs.data_structure.tree as tree
-from collections import deque
-# from multiprocessing import Process, Queue, current_process, freeze_support
-context  ={}
-from itertools import groupby
 
+# from multiprocessing import Process, Queue, current_process, freeze_support
 # any new connection imply recomputation of the graph topo sort
 # any params change imply an update of the task linked to the operation
 # any select might change the tas
 
+class UserOperation(tree.Node):
+    def __init__(self, func, params, payload):
+        pass
+
+    def as_Operation(self):
+        in_op = Operation()
+        out_op = Operation()
+        return in_op, out_op
 
 class Operation(tree.Node):
     """ """
     def __init__(self, func, params, payload):
         super(Operation, self).__init__( cargo = (func, params, payload))
-        self.task    = None
+
+    def do(self):
+        #merge parent payload
+        pass
 
 
-def bfs(root):
-    todo = [(0, [root])]
-    while todo:
-        _tuple = todo.pop(0)
-        idx, nodes = _tuple
-        nidx  = idx + 1
-        for n in nodes:
-            yield idx, n
-            todo.append((nidx, n.children))
-
-def indexize(node, idx, visited):
-    t = visited.get(node)
+def tarjan(root, elements):
+    nb_parents = {}
+    for el in elements:
+        nb_parents[el] = len(el.parents)
     #==
-    if t:
-        idx =  max(t[0], idx)
-    #==
-    visited[node] = (idx, node)
+    roots     = [[root]]
+    task_list = []
+    while roots:
+        root = roots.pop(0)
+        task_list.append(root)
+        for node in root.children:
+            nb_parents[node] = nb_parents[node] - 1
+            if nb_parents[node] == 0:
+                roots.append(node)
+    return task_list
 
-def topo_sort(root):
-    visited = {}
-    for tupl in bfs(root):
-        idx, n= tupl
-        indexize(n, idx, visited)
+def tarjan_par(root, elements):
+    nb_parents = {}
+    for el in elements:
+        nb_parents[el] = len(el.parents)
     #==
-    task_list = sorted(visited.values(), key=lambda n : n[0]) 
-    #==
-    result = []
-    for key, group in groupby(task_list, lambda x: x[0]):
-        _list = [ el[1] for el in group ]
-        result.append((key, _list))
-    return result
-
+    all_roots = [[root]]
+    task_list = []
+    while all_roots:
+        roots = all_roots.pop(0)
+        task_list.append(roots)
+        new_roots = []
+        for root in roots:
+            for node in root.children:
+                nb_parents[node] = nb_parents[node] - 1
+                if nb_parents[node] == 0:
+                    new_roots.append(node)
+        if new_roots:
+            all_roots.append(new_roots)
+    return task_list
 
 class Worker(object):
     """object that does the real work"""
