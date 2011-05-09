@@ -5,23 +5,23 @@ import labs.data_structure.tree as tree
 # any params change imply an update of the task linked to the operation
 # any select might change the tas
 
-class UserOperation(tree.Node):
-    def __init__(self, func, params, payload):
-        pass
-
-    def as_Operation(self):
-        in_op = Operation()
-        out_op = Operation()
-        return in_op, out_op
-
 class Operation(tree.Node):
     """ """
-    def __init__(self, func, params, payload):
-        super(Operation, self).__init__( cargo = (func, params, payload))
+    def __init__(self, type_id, params):
+        super(Operation, self).__init__( cargo = params)
+        self.done    = False
+        self.payload = None
+        self.type_id = type_id
 
-    def do(self):
-        #merge parent payload
-        pass
+    def send_result(self, result):
+        self.done = True
+        self.payload = result
+
+    def get_target(self):
+        return [p.payload for p in self.parents]
+
+    def as_task(self):
+        return Task(self)
 
 
 def tarjan(root, elements):
@@ -60,44 +60,71 @@ def tarjan_par(root, elements):
             all_roots.append(new_roots)
     return task_list
 
-class Worker(object):
-    """object that does the real work"""
-    def __init__(self, tasklist):
-        super(Worker, self).__init__()
+class Chief(object):
+    def __init__(self, tasklist, workers):
         self.tasklist = tasklist
+        self.workers  = workers
+        self.active   = False
 
-    def run(self):
-        t = self.tasklist.get()
-        q = Queue()
+    def next(self):
+        if not self.active:
+            return
+        if not self.workers:
+            return
+        task = self.tasklist.get()
+        if not task:
+            return
+        for w in self.workers:
+            if w.match(task):
+                w.do_task(task)
+                break
+
+    def done(self, worker, task):
+        self.tasklist.done(task)
+
+
+class TaskSystem(object):
+    def __init__(self, tasklists, chiefs):
+        self.tasklists = tasklists
+        self.chiefs = chiefs
+
+    def pause(self):
+        for c in self.chiefs:
+            c.active = False
+
+    def clear(self):
+        pass
+
 
 class Tasklist(object):
     def __init__(self):
-        self.tasks = []
-        self.paused = []
-
-    def add(self, task):
-        assert task not in self.tasks
-        self.tasks[task.priority] = task
-
-    def update(self, task):
-        assert task in self.tasks
-        self.tasks[task.priority] = task
+        self.tasks       = []
+        self.in_progress = []
 
     def get(self):
-        return self.tasks.pop(0) if self.tasks else None
+        if not self.tasks:
+            return None
+        #==
+        task = self.tasks.pop(0)
+        self.in_progress.apprend(task)
+        task.on_start()
+        return task
 
-    def pause(self):
-        self.tasks  = []
-        self.paused = self.tasks
-
-    def resume(self):
-        self.tasks  = self.paused
-        self.paused = []
+    def done(self, task):
+        assert task in self.in_progress
+        self.in_progress.remove(task)
+        task.on_done()
 
 class Task(object):
-    def __init__(self, priority, func, params):
-        self.func     = func
+    def __init__(self, creator, params):
+        self.creator   = creator
         self.params   = params
-        self.priority = priority
-        self.done     = False
+        self.target   = None
+        self.result   = None
 
+    def on_start(self):
+        self.target = self.creator.get_target()
+
+    def on_done(self):
+        assert self.result
+        self.creator.send_result(self.result)

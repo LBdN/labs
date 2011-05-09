@@ -51,6 +51,7 @@ def test_tarjan2(nb, nb_cnx):
     assert set(elements) == set(sum(task_list, []))
     return task_list
 
+
 def prof(nb, nb_cnx):
     import time
     import cProfile
