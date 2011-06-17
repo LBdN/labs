@@ -65,7 +65,7 @@ class ListReader(Reader):
 
 def make_scope(node, ctx):
     hGroupBox = QGroupBox(str(node))
-    layout = QVBoxLayout()
+    layout    = QVBoxLayout()
     hGroupBox.setLayout(layout)
     ctx['layout'].addWidget(hGroupBox)
     if node.is_name(): children = node.children[0].children
@@ -83,6 +83,10 @@ class IntReader(Reader):
         assert int_value.is_name()
         #==
         layout = ctx['layout']
+        #==
+        hGroupBox = QGroupBox(str(node))
+        layout    = QVBoxLayout()
+        #==
         label  = QLabel(str(int_value))
         spin_box    = QDoubleSpinBox()
         layout.addWidget(label)
