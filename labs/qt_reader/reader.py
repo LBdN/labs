@@ -86,6 +86,8 @@ class IntReader(Reader):
         #==
         hGroupBox = QGroupBox(str(node))
         layout    = QVBoxLayout()
+        
+        hGroupBox.setLayout(layout)
         #==
         label  = QLabel(str(int_value))
         spin_box    = QDoubleSpinBox()
