@@ -1,18 +1,20 @@
 import itertools
 
 class Layers(object):
-    def __init__(self, l, p, idx, vtx):
+    def __init__(self, mat, l, p, idx, vtx):
+        self.mat = mat
         self.vtx = vtx
         self.idx = idx
         self.p   = p
         self.l   = l
 
-def quad(w, h):
+def quad(w, h, mat):
     vtx = list(itertools.product((-w, +w), (-h, +h)))
     idx = [i for i,v in enumerate(vtx)]
     p   = [(0, len(idx))]
     l   = [[0, 0]]
-    return Layers(l, p, idx, vtx)
+    m   = [mat]
+    return Layers(m, l, p, idx, vtx)
 
 def add_layers(l1, l2):
     vtxs = l1.vtx + l2.vtx
@@ -23,8 +25,9 @@ def add_layers(l1, l2):
     p2   = [(i[0]+len(l1.idx), i[1]+len(l1.idx)) for i in l2.p]
     ps   = l1.p + p2
     #==
-    l2   = [ (i[0]+len(l1.p), i[1]+len(l1.p)) for i in l2.l]
-    ls   = l1.l + l2
+    ll2   = [ (i[0]+len(l1.p), i[1]+len(l1.p)) for i in l2.l]
+    ls   = l1.l + ll2
     #==
-    return Layers(ls, ps, idxs, vtxs)
+    ms   = l1.mat + l2.mat
+    return Layers(ms, ls, ps, idxs, vtxs)
 
