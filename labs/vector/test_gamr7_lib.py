@@ -13,13 +13,15 @@ def random_point(_max, angle):
     d = random.random()*_max
     return math.cos(angle)*d, math.sin(angle)*d
 
-def random_polygon(max_side, max_dist):
+def random_polygon(max_side, max_dist, offset=None):
     nb_side = random_nb(max_side)
     ps      = []
     for side in nb_side:
         angle = side*2*math.pi/len(nb_side)
         p = random_point(max_dist, angle)
         ps.append(p)
+    if offset:
+        ps = map(lambda x : (x[0]+offset[0], x[1]+offset[1]), ps)
     return ps
 
 def random_line(max_dist):
@@ -52,6 +54,20 @@ def tri_gen(ps):
         n  = ps[(i+1)%len(ps)]
         nn = ps[(i+2)%len(ps)]
         yield p, n, nn
+
+def generate_poly_grid(_max_side, _max_pol, case_size):
+    res = []
+    col = int(math.sqrt(_max_pol))
+    for n in range(_max_pol):
+        x, y   = divmod(n,col)
+        offset = x * case_size, y * case_size
+        res.append(random_polygon(_max_side, case_size/2, offset=offset))
+    return res
+
+
+def generate_poly(_max_pol, _max_side, _max_dist):
+    rp = (random_polygon(_max_side, _max_dist) for i in range(_max_pol))
+    return rp
 
 def test_trigo(_max_pol, _max_side, _max_dist):
     # generate polys

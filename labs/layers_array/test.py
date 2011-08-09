@@ -31,3 +31,10 @@ def add_layers(l1, l2):
     ms   = l1.mat + l2.mat
     return Layers(ms, ls, ps, idxs, vtxs)
 
+# generate convex polys
+# merge them into a numpy structure
+# run shrink
+
+def test1():
+    return add_layers(quad(10,10, (10,01), quad(15,21, (5,5)))
+
