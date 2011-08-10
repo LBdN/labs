@@ -2,9 +2,9 @@ import random
 import math
 import fvector
 
-import context
-import gamr7_lib.geometry.shape_operation as so 
-import gamr7_lib.intersections as it
+#import context
+#import gamr7_lib.geometry.shape_operation as so 
+#import gamr7_lib.intersections as it
 
 def random_nb(_max):
     return range(random.randint(3,_max))
