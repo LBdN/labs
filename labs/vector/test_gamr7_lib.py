@@ -33,6 +33,8 @@ def fvline(origin, direction):
                         fvector.Vector(direction[0], direction[1], 0))
 
 # for plot(ting) polygon in ipython
+# [plot(*separate_coord(p)) for p in generate_poly_grid(15,100,50)]
+
 def separate_coord(ps):
     xs = []
     ys = []
@@ -54,6 +56,13 @@ def tri_gen(ps):
         n  = ps[(i+1)%len(ps)]
         nn = ps[(i+2)%len(ps)]
         yield p, n, nn
+
+def iter_generate_poly_grid(_max_side, _max_pol, case_size):
+    col = int(math.sqrt(_max_pol))
+    for n in range(_max_pol):
+        x, y   = divmod(n,col)
+        offset = x * case_size, y * case_size
+        yield random_polygon(_max_side, case_size/2, offset=offset)
 
 def generate_poly_grid(_max_side, _max_pol, case_size):
     res = []
