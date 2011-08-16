@@ -6,9 +6,11 @@ class Transaction(object):
     def as_vtx(self):
         for s in self.sources:
             for layer in s.layers:
+                mat = layer.matrix
                 for polygon in layer.polygons:
-                    for idx in polygon.idxs:
-                        yield self.vtx_buffer[idx]
+                    vtx = [self.vtx_buffer[idx] for idx in polygon.idxs]
+                    yield map(lambda x : (x[0]+mat[0], x[1]+mat[1]), vtx)
+                        
 
     def fusion(self, other):
         idx_delta      = len(self.vtx_buffer)
@@ -36,6 +38,10 @@ class VertexBuffer(list):
 
     def add_quad(self, w, h):
         vtxs = [(1,1), (1,-1), (-1,-1), (-1,1)]
+        idxs = [self.append((v[0]*w, v[1]*h)) for v in vtxs]
+        return idxs
+
+    def from_vtx(self, vtxs):
         idxs = [self.append((v[0]*w, v[1]*h)) for v in vtxs]
         return idxs
 
@@ -70,8 +76,8 @@ def test1():
     s = Source('test1',[])
     t.sources.append(s)
     #==
-    for w in range(0,30,5):
-        for h in range(0,30,5):
+    for w in range(5,30,5):
+        for h in range(5,30,5):
             idxs = t.vtx_buffer.add_quad(w, h)
             l    = Layer([Polygon(idxs, False)], (w,h))
             s.layers.append(l)
