@@ -1,13 +1,9 @@
 
 import numpy as np
 
-import context
-import gamr7_lib.g_maps.dart as dart
-import gamr7_lib.g_maps.g_maps_operations as g_ops
+import dart as dart
+import g_maps_operations as g_ops
 
-
-gmap = np.fromfile('gmap_2011.08.16_15:12.np')
-gmap = gmap.reshape(100000, 3)
 
 def create_darts(gmap, darts=None):
     if darts is None:
@@ -61,8 +57,9 @@ def traverse(dart_idx, gmap, dims):
         cur = cur + 1
     return np.nonzero(seen > -1)
 
-def main():
-    gmap = np.fromfile('gmap_2011.08.16_15:12.np')
+def main(path):
+    path = path or './data/gmap_2011.08.16_15:12.np'
+    gmap = np.fromfile()
     gmap = gmap.reshape(100000, 3)
     darts = create_darts(gmap)
     connect_darts(gmap, darts)

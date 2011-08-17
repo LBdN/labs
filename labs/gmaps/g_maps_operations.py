@@ -1,5 +1,5 @@
-from gamr7_lib.g_maps.dart import Dart
-from gamr7_lib.g_maps.g_map_traverser import traverse
+from dart import Dart
+import traverser as t
 from itertools import izip
 
 def new_dart(embedding, cell_dimension):
@@ -50,7 +50,7 @@ def get_2_orbit(dart):
 def generic_get_orbit(dart, dimension, ffrom):
     orbit = []
     dimensions = range(dimension)+range(dimension+1, dart.get_dimension())
-    traverse(dart, dimensions, orbit.append, ffrom)
+    t.traverse(dart, dimensions, orbit.append, ffrom)
     return orbit               
 
 def get_orbit(dart, dimension):
@@ -69,7 +69,7 @@ def get_orbit_under(dart, dimension):
     assert dimension<=dart.get_dimension()
     orbit = []
     ffrom= "from get_orbit_under"
-    traverse(dart, range(dimension), orbit.append, ffrom)
+    t.traverse(dart, range(dimension), orbit.append, ffrom)
     return orbit
 
 def sew(dart1, dart2, dimension, embedding_update_func=None, **kw):
@@ -200,7 +200,7 @@ def check_dart_validity(dart, advanced_check=True):
 def check_g_maps_validity(dart, advanced_check=True):
     def func(dart):
         assert check_dart_validity(dart, advanced_check)
-    traverse(dart, range(dart.get_dimension()), func)
+    t.traverse(dart, range(dart.get_dimension()), func)
     return True
     
 def check_no_fixed_point(dart):
