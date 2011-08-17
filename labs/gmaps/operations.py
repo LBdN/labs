@@ -21,21 +21,27 @@ def _get_n_orbit_in_dim_2(dart, n):
     if   n==0 : i, j = 1, 2
     elif n==1 : i, j = 0, 2
     elif n==2 : i, j = 0, 1
+    #==
     orbit = []
     current_dart = dart.alphas[i]
     while current_dart!=dart:
         if current_dart.alphas[i]==current_dart:
-            return []
-        orbit.append(current_dart)
+            return [dart]
         if current_dart == dart:
-            return orbit
+            break
+        else:
+            orbit.append(current_dart)
+        #==
         current_dart=current_dart.alphas[j]
         if current_dart.alphas[j]==current_dart:
-            return []
-        orbit.append(current_dart)
+            return [dart]
         if current_dart == dart:
-            return orbit
+            break
+        else:
+            orbit.append(current_dart)
+        #==
         current_dart=current_dart.alphas[i]
+    orbit.append(dart)
     return orbit
                 
 def get_0_orbit(dart):
