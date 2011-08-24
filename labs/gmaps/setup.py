@@ -2,7 +2,7 @@ from distutils.core import setup
 from distutils.extension import Extension
 from Cython.Distutils import build_ext
 
-ext_modules = [Extension("traverser", ["g_map_traverser.pyx"])]
+ext_modules = [Extension("traverser", ["traverser.pyx"])]
 
 setup(
   name = 'traverser',

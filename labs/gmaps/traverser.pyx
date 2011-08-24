@@ -1,4 +1,4 @@
-def traverse(dart, dimensions, func, ffrom):
+def traverse(dart, dimensions, func):
     cdef int i
     traversed_dart = set([dart])
     stack = [dart]

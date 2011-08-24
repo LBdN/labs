@@ -53,22 +53,21 @@ def get_1_orbit(dart):
 def get_2_orbit(dart):
     return _get_n_orbit_in_dim_2(dart, 2)
         
-def generic_get_orbit(dart, dimension, ffrom):
+def generic_get_orbit(dart, dimension):
     orbit = []
     dimensions = range(dimension)+range(dimension+1, dart.get_dimension())
-    t.traverse(dart, dimensions, orbit.append, ffrom)
+    t.traverse(dart, dimensions, orbit.append)
     return orbit               
 
 def get_orbit(dart, dimension):
     assert dimension<=dart.get_dimension()
-    ffrom= "from failed get_orbit"
     if dimension==0:
-        return get_0_orbit(dart) or generic_get_orbit(dart, dimension, ffrom)
+        return get_0_orbit(dart) or generic_get_orbit(dart, dimension)
     elif dimension==1:
-        return get_1_orbit(dart) or generic_get_orbit(dart, dimension, ffrom)
+        return get_1_orbit(dart) or generic_get_orbit(dart, dimension)
     elif dimension==2:
-        return get_2_orbit(dart) or generic_get_orbit(dart, dimension, ffrom)
-    return generic_get_orbit(dart, dimension, ffrom)
+        return get_2_orbit(dart) or generic_get_orbit(dart, dimension)
+    return generic_get_orbit(dart, dimension)
 
 
 def get_orbit_under(dart, dimension):
