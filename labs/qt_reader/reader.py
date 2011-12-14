@@ -84,7 +84,7 @@ class IntReader(Reader):
         #==
         layout = ctx['layout']
         #==
-        hGroupBox = QGroupBox(str(node))
+        hGroupBox = QGroupBox(str(int_value))
         layout    = QVBoxLayout()
         
         hGroupBox.setLayout(layout)

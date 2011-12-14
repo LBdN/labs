@@ -5,18 +5,6 @@ from itertools import izip
 def new_dart(embedding, cell_dimension):
     return Dart(embedding, cell_dimension)
 
-#def traverse(dart, dimensions, func):
-    #traversed_dart = set([dart])
-    #stack = [dart]
-    #while stack:
-        #current_dart = stack.pop()
-        #func(current_dart)
-        #for i in dimensions:
-            #other_dart = current_dart.alphas[i]
-            #if not other_dart in traversed_dart:
-                #traversed_dart.add(other_dart)
-                #stack.append(other_dart)
-
 def _get_n_orbit_in_dim_2(dart, n):
     if   n==0 : i, j = 1, 2
     elif n==1 : i, j = 0, 2
@@ -68,7 +56,6 @@ def get_orbit(dart, dimension):
     elif dimension==2:
         return get_2_orbit(dart) or generic_get_orbit(dart, dimension)
     return generic_get_orbit(dart, dimension)
-
 
 def get_orbit_under(dart, dimension):
     assert dimension<=dart.get_dimension()
