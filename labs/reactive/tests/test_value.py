@@ -243,3 +243,41 @@ def test_meta11():
     assert isinstance(n.shape, Circle)
     assert n.shape.radius == 10
 
+def test_meta12():
+
+    class Mesh(b.Reactive):
+        path  = t._Type(str)
+        scale = t._Type(float)
+        pos   = t.List().add_idxs([t._Type(float), t._Type(float), t._Type(float)])
+
+    class Node(b.Reactive):
+        name  = t._Type(str)
+        #shape = t.Union(children=[t.Rtype(Circle), t.Rtype(Rect)])
+        mesh  = t.Rtype(Mesh)
+
+    class Selection(b.Reactive):
+        nodes = t.List().add_idx('multi', t.Rtype(Node))
+
+    class World(b.Reactive):
+        selection = t.Rtype(Selection)
+        nodes     = t.List().add_idx('multi', t.Rtype(Node))
+
+    #==
+    n = Node.create()
+    m = n.rnode['mesh']
+    m['path'].replace("models/environment", True)
+    m['scale'].replace(0.25, True)
+    m['pos'].replace([-8.0,42.0,0.0], True)
+    #==
+    n2 = Node.create()
+    m2 = n2.rnode['mesh']
+    m2['path'].replace("models/teapot", True)
+    m2['scale'].replace(0.25, True)
+    m2['pos'].replace([-8.0,42.0,0.0], True)
+    #==
+    w = World.create()
+    w.rnode['nodes'].append(n, True)
+    w.rnode
+    #==
+    assert w.nodes[0].mesh.path == "models/environment"
+    assert w.nodes[1].mesh.path == "models/teapot"

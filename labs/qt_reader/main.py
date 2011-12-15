@@ -1,6 +1,6 @@
 # -*- coding: UTF-8 -*-
-import gtk
-del gtk
+#import gtk
+#del gtk
 
 from PyQt4.QtCore import *
 from PyQt4.QtGui  import *
@@ -40,22 +40,18 @@ class QTTest(QMainWindow):
         self.pandaContainer.setGeometry(0,0,P3D_WIN_WIDTH,P3D_WIN_HEIGHT)
         #self.pandaContainer.setSizePolicy(QSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed))
 
-
-        #self.lineedit = QLineEdit("Proba ugnjezdenog prikaza...")
-
-        self.layout = QVBoxLayout()
-        self.layout.addWidget(self.pandaContainer)
-        #self.view = QGraphicsView()
+        self.layout      = QHBoxLayout()
+        self.prop_layout = QVBoxLayout()
+        self.prop_layout.insertStretch(-1)
+        self.layout.addLayout(self.prop_layout)
+        self._3d_layout  = QVBoxLayout()
+        self.layout.addLayout(self._3d_layout)
+        self._3d_layout.addWidget(self.pandaContainer)
         self.view = qtgraph.GraphWidget()
-        self.layout.addWidget(self.view)
+        self._3d_layout.addWidget(self.view)
         centralWidget = QWidget(self)
-        #centralWidget.setLayout(self.layout)
         self.setCentralWidget(centralWidget)
         #==
-        #hellobutton = QPushButton("Say 'Hello world!'",None)
-        ## And connect the action "sayHello" to the event "button has been clicked"
-        #self.connect(hellobutton, Qt.SIGNAL("clicked()"), sayHello)
-        #self.layout.addWidget(hellobutton)
 
         # this basically creates an idle task
         timer =  QTimer(self)
@@ -121,8 +117,10 @@ def main():
     readers   = reader.reader_prepare(ctx_panda, ctx_qt)
     to_read   = p_base.default_obj(taskMgr, base.camera, Task)
     for v, ctx in to_read:
-        ctx['layout'] = ctx_qt.layout
-    reader.read_all(to_read, readers)
+        ctx['layout'] = ctx_qt.prop_layout
+    meta_reader = reader.MetaReader(readers)
+    meta_reader.read_all(to_read)
 
     form.centralWidget().setLayout(form.layout)
+    form.prop_layout.insertStretch(-1)
     app.exec_()
