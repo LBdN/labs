@@ -96,8 +96,12 @@ class List(_Type):
         return len(self.children)==1 and self.children[0].multi
 
     def _get_default(self, factory):
-        sorted_children = sorted(self.children, key = lambda c : c.name)
-        return factory((c.get_default() for c in sorted_children))
+        if self.children[0].multi:
+            assert len(self.children) == 1
+            return factory([])
+        else:
+            sorted_children = sorted(self.children, key = lambda c : c.name)
+            return factory((c.get_default() for c in sorted_children))
 
     def add_idx(self, idx, rtype):
         i = Index(idx)

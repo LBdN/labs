@@ -95,7 +95,7 @@ def test_meta7():
     assert p.points == [1,6]
     for tr in reversed(trs):
         name_node.set_value(tr.reverse())
-    assert p.points == [0]
+    assert p.points == []
 
 def test_meta8():
     class Rect(b.Reactive):
@@ -113,7 +113,6 @@ def test_meta8():
     assert isinstance(p.points, list)
     assert all( isinstance(el, (Rect, Circle)) for el in p.points)
     #==
-    start = p.points[0]
     r     = Rect.create()
     c     = Circle.create()
     c2    = Circle.create()
@@ -130,7 +129,7 @@ def test_meta8():
     assert len(p.points) == 2 and all( isinstance(c, Circle) for c in p.points)
     for tr in reversed(trs):
         p.rnode.children[0].set_value(tr.reverse())
-    assert p.points == [start]
+    assert p.points == []
 
 def test_meta9():
     class Rect(b.Reactive):
@@ -148,7 +147,7 @@ def test_meta9():
     assert isinstance(p.points, list)
     assert all( isinstance(el, (Rect, Circle)) for el in p.points)
     #==
-    start = p.points[0]
+    start = [] 
     r     = Rect.create()
     c     = Circle.create()
     c2    = Circle.create()
@@ -169,7 +168,7 @@ def test_meta9():
         if tr is tr_radius: target = radius_node
         else              : target = points_node
         target.set_value(tr.reverse())
-    assert p.points == [start]
+    assert p.points == []
 
 def test_meta10():
     class Polygon(b.Reactive):
@@ -178,6 +177,7 @@ def test_meta10():
         def __repr__(self):
             return str(self.points)
     p   = Polygon.create()
+    p.rnode['points'].append([1,2,3], True)
     assert isinstance(p, Polygon)
     assert hasattr(p, 'points')
     assert isinstance(p.points, list)
@@ -252,7 +252,6 @@ def test_meta12():
 
     class Node(b.Reactive):
         name  = t._Type(str)
-        #shape = t.Union(children=[t.Rtype(Circle), t.Rtype(Rect)])
         mesh  = t.Rtype(Mesh)
 
     class Selection(b.Reactive):
@@ -268,16 +267,13 @@ def test_meta12():
     m['path'].replace("models/environment", True)
     m['scale'].replace(0.25, True)
     m['pos'].replace([-8.0,42.0,0.0], True)
-    #==
-    n2 = Node.create()
-    m2 = n2.rnode['mesh']
-    m2['path'].replace("models/teapot", True)
-    m2['scale'].replace(0.25, True)
-    m2['pos'].replace([-8.0,42.0,0.0], True)
+    assert n.mesh.path == "models/environment"
+    assert n.rnode['mesh']['path'].get_value() == "models/environment"
     #==
     w = World.create()
     w.rnode['nodes'].append(n, True)
-    w.rnode
+    #==
+    assert n.mesh.path == "models/environment"
+    assert n.rnode['mesh']['path'].get_value() == "models/environment"
     #==
     assert w.nodes[0].mesh.path == "models/environment"
-    assert w.nodes[1].mesh.path == "models/teapot"
