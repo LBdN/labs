@@ -20,6 +20,18 @@ class Reader(object):
         view, new_ctx = self._read(obj, ctx)
         return view, new_ctx
 
+class NameReader(Reader):
+    def create_scope(self, obj):
+        pass
+
+    def _create_scope(self, obj):
+        pass
+
+class IndexReader(NameReader):
+    def _create_scope(self, obj):
+        pass
+
+
 class MeshReader(Reader):
     _type = p_base.Mesh
 
@@ -28,33 +40,59 @@ class MeshReader(Reader):
 
     def _read(self, mesh_node, ctx):
         mesh = mesh_node.get_value()
-        obj = self.ctx_panda.load(mesh.path)
-        obj.setScale((mesh.scale, mesh.scale,mesh.scale))
-        obj.setPos(*mesh.pos)
-        Scaler(obj, mesh_node['scale'])
+        am   = AbstractMesh(self.ctx_panda)
+        Wrapper(mesh_node['scale'], am.notify_scale)
+        Wrapper(mesh_node['path'], am.notify_path)
+        #obj = self.ctx_panda.load(mesh.path)
+        #obj.setScale((mesh.scale, mesh.scale,mesh.scale))
+        #obj.setPos(*mesh.pos)
+        #Scaler(obj, mesh_node['scale'])
         for idx, c in enumerate(mesh_node['pos'].children[0].children):
-            Mover(obj, c, idx)
+            Wrapper(c, am.notify_pos, {'idx':idx})
+            #Mover(obj, c, idx)
+        mesh_node.init_notification()
         return make_scope(mesh_node, ctx)
 
-class Scaler(object):
-    def __init__(self, mesh, scale_node):
-        self.mesh = mesh
-        scale_node.register(self)
+class AbstractMesh(object):
+    def __init__(self, loader):
+        self.loader = loader
+        self.mesh   = None
 
-    def notify(self, transaction):
+    def notify_path(self, transaction, d=None):
+        if self.mesh:
+            scale = self.mesh.getScale()
+            pos   = self.mesh.getPos()
+            self.mesh.removeNode()
+        #==
+        new_mesh = self.loader.load(transaction.new)
+        if self.mesh:
+            new_mesh.setScale(scale)
+            new_mesh.setPos(pos)
+        #==
+        self.mesh = new_mesh
+
+    def notify_scale(self, transaction, d=None):
+        if not self.mesh:
+            pass
         scale = [transaction.new]*3
         self.mesh.setScale(*scale)
 
-class Mover(object):
-    def __init__(self, mesh, pos_node, idx):
-        self.mesh = mesh
-        pos_node.register(self)
-        self.idx = idx
+    def notify_pos(self, transaction, d=None):
+        if not self.mesh:
+            pass
+        pos = self.mesh.getPos()
+        print transaction.new
+        pos[d['idx']] = transaction.new
+        self.mesh.setPos(pos)
+
+class Wrapper(object):
+    def __init__(self, node, func, _dict=None):
+        node.register(self)
+        self.func  = func
+        self._dict = _dict
 
     def notify(self, transaction):
-        pos = self.mesh.getPos()
-        pos[self.idx] = transaction.new
-        self.mesh.setPos(pos)
+        self.func(transaction, d=self._dict)
 
 class ListReader(Reader):
     _type = list
@@ -82,19 +120,16 @@ class IntReader(Reader):
     def _read(self, int_value, ctx):
         assert int_value.is_name()
         #==
-        #hGroupBox = QGroupBox(str(int_value))
-        layout = QHBoxLayout()
-        #hGroupBox.setLayout(layout)
-        #==
-        ctx['layout'].addLayout(layout)
-        #==
         label    = QLabel(str(int_value))
         spin_box = QDoubleSpinBox()
+        layout   = QHBoxLayout()
         layout.addWidget(label)
         layout.addWidget(spin_box)
         #==
         spin_box.setValue(int_value.get_value())
         spin_box.valueChanged.connect(lambda x: int_value.replace(x, True))
+        #==
+        ctx['layout'].addLayout(layout)
         #==
         return None, None
 
@@ -109,10 +144,40 @@ class StrReader(Reader):
         #==
         layout = QHBoxLayout()
         #==
-        label    = QLabel(str(str_name.get_value()))
-        ctx['layout'].addWidget(label)
+        fp = FileProp()
+        fp.connect(str_name)
+        ctx['layout'].addLayout(fp.layout)
         #==
         return None, None
+
+class FileProp(object):
+    def __init__(self):
+        self.layout   = QHBoxLayout()
+        self.label    = QLabel()
+        self.button   = QPushButton("...")
+        self.button.clicked.connect(self.choose_path)
+        self.layout.addWidget(self.label, 5)
+        self.layout.addWidget(self.button, 1)
+
+    def connect(self, v):
+        self.target = v
+        self.target.register(self)
+        self.set_value(str(self.target.get_value()))
+
+    def notify(self, transaction):
+        self.set_value(transaction.new)
+
+    def set_value(self, v):
+        self.label.setText(v)
+
+    def choose_path(self):
+        path = QFileDialog.getOpenFileName( None,
+                                        "Open Mesh",
+                                        "~",
+                                        self.label.tr("Panda Mesh Files (*.egg *.egg.pz *.bam)"))
+        if path:
+            self.target.replace(str(path), True)
+
 
 class NodeReader(Reader):
     _type = p_base.Node
@@ -127,24 +192,6 @@ class NodeReader(Reader):
         n = self.graph.drawNode(any_val, 50, ( len(self.nodes)*50, len(self.nodes)*50))
         self.nodes.append(n)
         return make_scope(any_val, ctx)
-        #if self.done :
-            #return any_val, ctx
-        #else:
-            #self.done = True
-        #size  = 50
-        #nodes = []
-        #for i in range(0,500,100):
-            #for j in range(0,500,100):
-                #n  = self.graph.drawNode(any_val, size, (i,j))
-                #if nodes:
-                    #start = random.choice(nodes)
-                    #e = self.graph.drawEgde(start, n, size)
-                    #n.edgeList.append(e)
-                    #start.edgeList.append(e)
-                #nodes.append(n)
-        ##r = qtgraph.getRect(nodes)
-        ##self.graph.centerScene(r)
-        #return None, ctx
 
 class SelectionReader(Reader):
     _type = (p_base.Selection, p_base.World)

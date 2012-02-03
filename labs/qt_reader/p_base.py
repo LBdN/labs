@@ -13,8 +13,17 @@ class Mesh(b.Reactive):
     scale = t._Type(float)
     pos   = t.List().add_idxs([t._Type(float), t._Type(float), t._Type(float)])
 
+class Slot(b.Reactive):
+    pass
+
+class Slot(b.Reactive):
+    name   = t._Type(str)
+    parent = t.Rtype(Slot)
+
+
 class Node(b.Reactive):
     name  = t._Type(str)
+    slots = t.List().add_idx('multi', t._Type(str))
     #shape = t.Union(children=[t.Rtype(Circle), t.Rtype(Rect)])
     mesh  = t.Rtype(Mesh)
 
@@ -24,7 +33,6 @@ class Selection(b.Reactive):
 class World(b.Reactive):
     selection = t.Rtype(Selection)
     nodes     = t.List().add_idx('multi', t.Rtype(Node))
-    
 
 
 def default_obj(*args):
@@ -45,6 +53,5 @@ def default_obj(*args):
     w.rnode['nodes'].append(n, True)
     w.rnode['nodes'].append(n2, True)
     #==
-    #return [(m.rnode, {}), (m2.rnode, {}), (n.rnode, {}), (s.rnode, {})]
-    return [(w.rnode, {}),]
+    return w.rnode
 

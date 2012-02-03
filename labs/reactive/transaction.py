@@ -7,7 +7,7 @@ class Transaction(object):
         self.old    = old
         self.sender = sender
         assert self.sender
-        assert self.old is not None or isinstance(self, AppendItem)
+        assert self.old is not None or isinstance(self, (AppendItem, Init))
         #==
         self.applied_on = None
         self.vnames     = None
@@ -15,6 +15,9 @@ class Transaction(object):
     def __repr__(self):
         return "%s(new:%s old:%s sender:%s)" \
                 %( str(type(self)), self.new, self.old, self.sender)
+
+class Init(Transaction):
+    pass
 
 class Replace(Transaction):
     def reverse(self):

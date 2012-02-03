@@ -5,6 +5,15 @@
 from PyQt4.QtCore import *
 from PyQt4.QtGui  import *
 
+import sys
+def debug_trace():
+  '''Set a tracepoint in the Python debugger that works with Qt'''
+  from PyQt4.QtCore import pyqtRemoveInputHook
+  from pdb          import set_trace
+  pyqtRemoveInputHook()
+  set_trace()
+sys.modules["__builtin__"].__dict__['debug_func'] = debug_trace
+
 P3D_WIN_WIDTH  = 800
 P3D_WIN_HEIGHT = 500
 
@@ -116,10 +125,10 @@ def main():
     ctx_qt    = form
     readers   = reader.reader_prepare(ctx_panda, ctx_qt)
     to_read   = p_base.default_obj(taskMgr, base.camera, Task)
-    for v, ctx in to_read:
-        ctx['layout'] = ctx_qt.prop_layout
+    ctx       = {}
+    ctx['layout'] = ctx_qt.prop_layout
     meta_reader = reader.MetaReader(readers)
-    meta_reader.read_all(to_read)
+    meta_reader.read_all([(to_read, ctx)])
 
     form.centralWidget().setLayout(form.layout)
     form.prop_layout.insertStretch(-1)

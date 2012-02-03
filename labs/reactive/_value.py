@@ -18,6 +18,7 @@ class Value(tree.Node):
         assert (self.naked_instance == tr.old)
         proposed_value = tr.proposed_value(self.naked_instance)
         if not self.rtype.validate(proposed_value) : 
+            debug_func()
             tr = t.Error(tr); assert False, tr
         tr.do(self)
         assert self.rtype.validate(self.naked_instance)
@@ -37,6 +38,10 @@ class Value(tree.Node):
 
     def __repr__(self):
         return repr(self.rtype)
+
+    def init_notification(self):
+        for c in self.children:
+            c.init_notification()
 
 class List(Value):
 
@@ -127,7 +132,13 @@ class Name(tree.Node, tree.OneChildMixin):
         if listener not in self.listeners:
             self.listeners.append(listener)
 
-    def notify(self, transaction):
+    def init_notification(self):
+        tr = t.Init(self.get_value(), sender=self)
+        self.fire_notification(tr)
+        for c in self.children:
+            c.init_notification()
+
+    def fire_notification(self, transaction):
         for l in self.listeners:
             l.notify(transaction)
 
@@ -140,7 +151,7 @@ class Name(tree.Node, tree.OneChildMixin):
         if not isinstance(transaction, t.Error):
             self.set(transaction)
         assert self.invariant() # no warranty once we call notify
-        self.notify(transaction)
+        self.fire_notification(transaction)
 
     def get_value(self):
         child     = self.get_only_child()

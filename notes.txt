@@ -1,0 +1,6 @@
+- a filepath is described as a str, but mustn't.
+- when an object cannot be modified piece_wise, 
+- graph stuff : deleting via graph 
+- variable list : when one add an element.
+
+
