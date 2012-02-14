@@ -7,6 +7,104 @@ from PyQt4.QtGui  import *
 from PyQt4.QtCore import *
 
 
+class Name(object):
+    def __init__(self, subreaders):
+        self.subreaders = subreaders
+
+    def match(self, obj):
+        return obj.is_name() 
+
+    def read(self, obj, ctx):
+        if not self.match(obj):
+            return obj, ctx
+        #==
+        view, new_ctx = self._read(obj, ctx)
+        return view, new_ctx
+
+    def _read(self, obj, ctx):
+        assert obj.is_name() 
+        new_ctx = ctx.copy()
+        new_ctx['name'] = str(obj.name)
+        return obj.get_only_child(), new_ctx
+
+class Value(object):
+    def match(self, obj):
+        return not obj.is_name() #and not obj.children
+
+    def read(self, obj, ctx):
+        if not self.match(obj):
+            return obj, ctx
+        #==
+        view, new_ctx = self._read(obj, ctx)
+        return view, new_ctx
+
+    def _read(self, obj, ctx):
+        if obj.children != []:
+            groupbox, layout = make_scope(ctx.get('name', 'root') + "::" + str(obj.rtype))
+            ctx['layout'].addWidget(groupbox)
+            return obj.children, {'layout' : layout}
+        else:
+            layout   = QHBoxLayout()
+            label    = QLabel(ctx['name'])
+            layout.addWidget(label)
+            ctx['layout'].addLayout(layout)
+            self.terminal_widget(obj, layout)
+            return None, None
+
+    def terminal_widget(self, obj, layout):
+        if isinstance(obj.get_value(), (float, int)):
+            spin_box = QDoubleSpinBox()
+            spin_box.setValue(obj.get_value())
+            spin_box.valueChanged.connect(lambda x: obj.replace(x, True))
+            layout.addWidget(spin_box)
+        elif isinstance(obj.get_value(), str):
+            #fp = FileProp()
+            #fp.connect(obj)
+            #layout.addWidget(fp.layout)
+            pass
+        else:
+            label = QLabel(str(obj.get_value()))
+            layout.addWidget(label)
+
+    def container_widget(self, obj, ctx):
+        pass
+
+class FileProp(object):
+    def __init__(self):
+        self.layout      = QHBoxLayout()
+        self.value_label = QLabel()
+        self.button      = QPushButton("...")
+        self.button.clicked.connect(self.choose_path)
+        self.layout.addWidget(self.value_label, 5)
+        self.layout.addWidget(self.button, 1)
+
+    def connect(self, v):
+        self.target = v
+        self.target.register(self)
+        self.set_value(str(self.target.get_value()))
+
+    def notify(self, transaction):
+        self.set_value(transaction.new)
+
+    def set_value(self, v):
+        self.value_label.setText(v)
+
+    def choose_path(self):
+        path = QFileDialog.getOpenFileName( None,
+                                        "Open Mesh",
+                                        "~",
+                                        self.value_label.tr("Panda Mesh Files (*.egg *.egg.pz *.bam)"))
+        if path:
+            self.target.replace(str(path), True)
+
+def make_scope(scope_name):
+    groupbox  = QGroupBox(scope_name)
+    layout    = QVBoxLayout()
+    groupbox.setLayout(layout)
+    groupbox.setStyleSheet("QGroupBox {border:1px solid black; padding: 5px 3px 5px 5px}")
+    #==
+    return groupbox, layout
+
 class Reader(object):
     def match(self, obj):
         return isinstance(obj.get_value(), self._type)
@@ -19,17 +117,30 @@ class Reader(object):
         #print "catching %s" %(self._type)
         view, new_ctx = self._read(obj, ctx)
         return view, new_ctx
-
-class NameReader(Reader):
-    def create_scope(self, obj):
-        pass
-
+class IndexReader(Name):
     def _create_scope(self, obj):
-        pass
+        hGroupBox = QGroupBox(str(node))
+        layout    = QVBoxLayout()
+        hGroupBox.setLayout(layout)
+        ctx['layout'].addWidget(hGroupBox)
+        button   = QPushButton("+")
+        button.clicked.connect()
+        ctx['layout'].addWidget(button)
+        if node.is_name(): children = node.children[0].children
+        else             : children = node.children
+        #==
+        return children, {'layout' : layout}
 
-class IndexReader(NameReader):
-    def _create_scope(self, obj):
-        pass
+    def xxx(node):
+        rtype = node.name.get_only_child()
+        winst = rtype.factory.Create()
+        node.parents[0].appendT(winst)
+        self.meta.read_one(winst, ctx)
+
+class IndexView(object):
+    def __init__(self, ctx):
+        self.ctw = ctx
+
 
 
 class MeshReader(Reader):
@@ -40,20 +151,15 @@ class MeshReader(Reader):
 
     def _read(self, mesh_node, ctx):
         mesh = mesh_node.get_value()
-        am   = AbstractMesh(self.ctx_panda)
+        am   = MeshView(self.ctx_panda)
         Wrapper(mesh_node['scale'], am.notify_scale)
         Wrapper(mesh_node['path'], am.notify_path)
-        #obj = self.ctx_panda.load(mesh.path)
-        #obj.setScale((mesh.scale, mesh.scale,mesh.scale))
-        #obj.setPos(*mesh.pos)
-        #Scaler(obj, mesh_node['scale'])
         for idx, c in enumerate(mesh_node['pos'].children[0].children):
             Wrapper(c, am.notify_pos, {'idx':idx})
-            #Mover(obj, c, idx)
         mesh_node.init_notification()
         return make_scope(mesh_node, ctx)
 
-class AbstractMesh(object):
+class MeshView(object):
     def __init__(self, loader):
         self.loader = loader
         self.mesh   = None
@@ -81,7 +187,6 @@ class AbstractMesh(object):
         if not self.mesh:
             pass
         pos = self.mesh.getPos()
-        print transaction.new
         pos[d['idx']] = transaction.new
         self.mesh.setPos(pos)
 
@@ -101,15 +206,6 @@ class ListReader(Reader):
         assert list_node.is_name()
         return make_scope(list_node, ctx)
 
-def make_scope(node, ctx):
-    hGroupBox = QGroupBox(str(node))
-    layout    = QVBoxLayout()
-    hGroupBox.setLayout(layout)
-    ctx['layout'].addWidget(hGroupBox)
-    if node.is_name(): children = node.children[0].children
-    else             : children = node.children
-    #==
-    return children, {'layout' : layout}
 
 class IntReader(Reader):
     _type = float
@@ -120,12 +216,13 @@ class IntReader(Reader):
     def _read(self, int_value, ctx):
         assert int_value.is_name()
         #==
-        label    = QLabel(str(int_value))
+        label    = QLabel(str(int_value.name))
         spin_box = QDoubleSpinBox()
         layout   = QHBoxLayout()
         layout.addWidget(label)
         layout.addWidget(spin_box)
         #==
+        spin_box = QDoubleSpinBox()
         spin_box.setValue(int_value.get_value())
         spin_box.valueChanged.connect(lambda x: int_value.replace(x, True))
         #==
@@ -150,25 +247,28 @@ class StrReader(Reader):
         #==
         return None, None
 
-class FileProp(object):
+class FileProp2(object):
     def __init__(self):
         self.layout   = QHBoxLayout()
-        self.label    = QLabel()
+        self.name_label    = QLabel()
+        self.value_label   = QLabel()
         self.button   = QPushButton("...")
         self.button.clicked.connect(self.choose_path)
-        self.layout.addWidget(self.label, 5)
+        self.layout.addWidget(self.name_label, 1)
+        self.layout.addWidget(self.value_label, 5)
         self.layout.addWidget(self.button, 1)
 
     def connect(self, v):
         self.target = v
         self.target.register(self)
+        self.name_label.setText(str(v.name))
         self.set_value(str(self.target.get_value()))
 
     def notify(self, transaction):
         self.set_value(transaction.new)
 
     def set_value(self, v):
-        self.label.setText(v)
+        self.value_label.setText(v)
 
     def choose_path(self):
         path = QFileDialog.getOpenFileName( None,
@@ -199,23 +299,23 @@ class SelectionReader(Reader):
     def __init__(self, ctx_qt):
         self.ctx_qt = ctx_qt
 
-    def prepare(self, meta_reader):
-        self.meta_reader = meta_reader
-
     def _read(self, val, ctx):
         return make_scope(val, ctx)
         
 
-def reader_prepare(ctx_panda, ctx_qt):
-    r = []
-    r.append(MeshReader(ctx_panda))
-    r.append(ListReader())
-    r.append(IntReader(ctx_qt))
-    r.append(StrReader(ctx_qt))
-    r.append(NodeReader(ctx_qt))
-    r.append(SelectionReader(ctx_qt))
-    return r
+#def reader_prepare(ctx_panda, ctx_qt):
+    #r = []
+    #r.append(MeshReader(ctx_panda))
+    #r.append(ListReader())
+    #r.append(IntReader(ctx_qt))
+    #r.append(StrReader(ctx_qt))
+    #r.append(NodeReader(ctx_qt))
+    #r.append(SelectionReader(ctx_qt))
+    #return r
 
+def reader_prepare(ctx_panda, ctx_qt):
+    r = [Value(), Name([ Value()])]
+    return r
 
 class MetaReader(object):
     def __init__(self, readers):

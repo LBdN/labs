@@ -162,6 +162,9 @@ class Name(tree.Node, tree.OneChildMixin):
     def is_name(self):
         return True
 
+    def is_container(self):
+        return self.get_only_child().children != []
+
 class Index(Name):
     def __init__(self, name, idx):
         Name.__init__(self, name)
