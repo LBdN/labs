@@ -17,7 +17,9 @@ class Transaction(object):
                 %( str(type(self)), self.new, self.old, self.sender)
 
 class Init(Transaction):
-    pass
+
+    def affect(self, listener):
+        listener.tr_replace(self)
 
 class Replace(Transaction):
     def reverse(self):
@@ -39,6 +41,9 @@ class Replace(Transaction):
         #==
         if isinstance(rvalue.naked_instance, list):
             assert len(rvalue.children)==len(rvalue.naked_instance)
+
+    def affect(self, listener):
+        listener.tr_replace(self)
 
 class InsertItem(Transaction):
     def reverse(self):
@@ -70,6 +75,9 @@ class InsertItem(Transaction):
         #==
         assert len(rvalue.children)==len(rvalue.naked_instance)
 
+    def affect(self, listener):
+        listener.tr_insert(self)
+
 class AppendItem(Transaction):
     def reverse(self):
         new_old  = self.old[:]
@@ -96,6 +104,9 @@ class AppendItem(Transaction):
         #==
         assert len(rvalue.children)==len(rvalue.naked_instance)
 
+    def affect(self, listener):
+        listener.tr_append(self)
+
 class RemoveItem(Transaction):
     def reverse(self):
         new_old  = self.old[:]
@@ -118,6 +129,9 @@ class RemoveItem(Transaction):
         #==
         assert len(rvalue.children)==len(rvalue.naked_instance)
 
+    def affect(self, listener):
+        listener.tr_remove(self)
+
 class Error(object):
     def __init__(self, transaction):
         self.transaction = transaction
@@ -130,3 +144,6 @@ class Error(object):
 
     def do(self, rvalue):
         pass
+
+    def affect(self, listener):
+        listener.tr_error(self)

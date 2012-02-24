@@ -16,7 +16,7 @@ class ReactiveMeta(type):
         #==
         T = type.__new__(cls, name, bases, attrs)
         #==
-        factory = specials.get('factory_name')
+        factory = specials.get('__factory__')
         if factory : r = _type._Class(factory)
         else       : r = _type._Class(T)
         #==

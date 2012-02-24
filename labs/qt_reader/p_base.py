@@ -9,7 +9,7 @@ class Circle(b.Reactive):
     radius = t._Type(int)
 
 class Mesh(b.Reactive):
-    path  = t._Type(str)
+    path  = t._Type(lambda : "models/environment", type_validator=lambda x: isinstance(x, str))
     scale = t._Type(float)
     pos   = t.List().add_idxs([t._Type(float), t._Type(float), t._Type(float)])
 

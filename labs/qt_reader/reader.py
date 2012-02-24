@@ -7,12 +7,9 @@ from PyQt4.QtGui  import *
 from PyQt4.QtCore import *
 
 
-class Name(object):
-    def __init__(self, subreaders):
-        self.subreaders = subreaders
-
+class Terminal(object):
     def match(self, obj):
-        return obj.is_name() 
+        return not obj.rvalue().is_container() 
 
     def read(self, obj, ctx):
         if not self.match(obj):
@@ -22,86 +19,217 @@ class Name(object):
         return view, new_ctx
 
     def _read(self, obj, ctx):
-        assert obj.is_name() 
-        new_ctx = ctx.copy()
-        new_ctx['name'] = str(obj.name)
-        return obj.get_only_child(), new_ctx
+        rvalue = obj.get_value()
+        if isinstance(rvalue, (int, float)):
+            prop = NumberProp(obj)
+        elif isinstance(rvalue, str):
+            prop = PathProp(obj)
+        else:
+            prop = TerminalProp(obj)
+        ctx['layout'].addWidget(prop)
+        return None, None
 
-class Value(object):
-    def match(self, obj):
-        return not obj.is_name() #and not obj.children
+class TerminalProp(QWidget):
 
-    def read(self, obj, ctx):
-        if not self.match(obj):
-            return obj, ctx
+    def __init__(self, source, parent=None):
+        super(TerminalProp, self).__init__(parent=parent)
+        self.layout  = QHBoxLayout(self)
         #==
-        view, new_ctx = self._read(obj, ctx)
-        return view, new_ctx
+        if source.is_index():
+            button   = QPushButton("-")
+            button.setMaximumSize(20, 20)
+            self.layout.addWidget(button,1)
+        #==
+        label    = QLabel(str(source.name))
+        self.layout.addWidget(label,2)
+        #==
+        self.right_part(source, self.layout)
+        #==
+        source.register(self)
+        source.init_notification()
 
-    def _read(self, obj, ctx):
-        if obj.children != []:
-            groupbox, layout = make_scope(ctx.get('name', 'root') + "::" + str(obj.rtype))
-            ctx['layout'].addWidget(groupbox)
-            return obj.children, {'layout' : layout}
-        else:
-            layout   = QHBoxLayout()
-            label    = QLabel(ctx['name'])
-            layout.addWidget(label)
-            ctx['layout'].addLayout(layout)
-            self.terminal_widget(obj, layout)
-            return None, None
-
-    def terminal_widget(self, obj, layout):
-        if isinstance(obj.get_value(), (float, int)):
-            spin_box = QDoubleSpinBox()
-            spin_box.setValue(obj.get_value())
-            spin_box.valueChanged.connect(lambda x: obj.replace(x, True))
-            layout.addWidget(spin_box)
-        elif isinstance(obj.get_value(), str):
-            #fp = FileProp()
-            #fp.connect(obj)
-            #layout.addWidget(fp.layout)
-            pass
-        else:
-            label = QLabel(str(obj.get_value()))
-            layout.addWidget(label)
-
-    def container_widget(self, obj, ctx):
-        pass
-
-class FileProp(object):
-    def __init__(self):
-        self.layout      = QHBoxLayout()
-        self.value_label = QLabel()
-        self.button      = QPushButton("...")
-        self.button.clicked.connect(self.choose_path)
-        self.layout.addWidget(self.value_label, 5)
-        self.layout.addWidget(self.button, 1)
-
-    def connect(self, v):
-        self.target = v
-        self.target.register(self)
-        self.set_value(str(self.target.get_value()))
+    def right_part(self, source, layout):
+        self.label = QLabel(str(source.get_value()))
+        layout.addWidget(self.label, 7)
 
     def notify(self, transaction):
+        transaction.affect(self)
+
+    def tr_replace(self, transaction):
         self.set_value(transaction.new)
 
     def set_value(self, v):
-        self.value_label.setText(v)
+        self.label.setText(str(v))
+
+class NumberProp(TerminalProp):
+
+    def right_part(self, source, layout):
+        self.spin_box = QDoubleSpinBox()
+        self.spin_box.valueChanged.connect(lambda x: source.replace(x, True))
+        layout.addWidget(self.spin_box,7)
+
+    def set_value(self, new_val):
+        self.spin_box.setValue(new_val)
+
+class PathProp(TerminalProp):
+    def right_part(self, source, layout):
+        self.path_label = QLineEdit()
+        self.path_label.setReadOnly(True)
+        self.path_label.textChanged.connect(lambda x: source.replace(str(x), True))
+        self.button      = QPushButton("...")
+        self.button.clicked.connect(self.choose_path)
+        layout.addWidget(self.path_label, 6)
+        layout.addWidget(self.button, 1)
+
+    def set_value(self, v):
+        self.path_label.setText(v)
 
     def choose_path(self):
         path = QFileDialog.getOpenFileName( None,
                                         "Open Mesh",
                                         "~",
-                                        self.value_label.tr("Panda Mesh Files (*.egg *.egg.pz *.bam)"))
+                                        self.path_label.tr("Panda Mesh Files (*.egg *.egg.pz *.bam)"))
         if path:
-            self.target.replace(str(path), True)
+            self.path_label.setText(path)
+
+
+class ScopeProp(QWidget):
+
+    def __init__(self, source, meta):
+        self.meta = meta
+        super(ScopeProp, self).__init__()
+        self.layout = QVBoxLayout(self)
+        self.layout.setContentsMargins(0,10,0,0)
+        #==
+        self.groupbox  = QGroupBox(self)
+        self.gb_layout = QVBoxLayout()
+        self.groupbox.setLayout(self.gb_layout)
+        self.layout.addWidget(self.groupbox)
+        #==
+        if source.is_index():
+            self.button  = QPushButton("-", parent = self)
+            self.button.setMaximumSize(20, 17)
+            self.button.move(10, 5) 
+        if source.rvalue().is_multilist():
+            button = QPushButton("+")
+            button.clicked.connect(lambda : self.add_item(source))
+            self.layout.addWidget(button)
+            #source.register(self)
+        #==
+        title        = "%s::%s" %(source.name, source.rvalue().rtype)
+        self.label   = QLabel(title, parent = self)
+        self.label.move(40, 0) 
+
+    def notify(self, tr):
+        tr.affect(self)
+
+    def tr_remove(self, transaction):
+        self.setParent(None)
+
+    def add_item(self, obj):
+        new_item = obj.rvalue().get_new_item()
+        obj.append(new_item, True)
+        ctx           = {}
+        ctx['layout'] = self.gb_layout
+        self.meta.read_all([(obj, ctx)])
+        #==
+        #==
+        #widget = ctx['widget']
+        #parent = widget.parentWidget()
+        #layout = parent.layout()
+        #idx    = layout.indexOf(widget)
+        #widget.setParent(None)
+        ##==
+        #new_ctx                  = ctx.copy()
+        #new_ctx['layout']        = layout
+        #new_ctx['widget']        = parent
+        #new_ctx['index']         = idx
+        #self.meta.read_all([(obj, new_ctx)])
+
+
+class NonTerminal(object):
+    def match(self, obj):
+        return obj.is_container()
+        #return not obj.parents or obj.is_container()
+
+    def read(self, obj, ctx):
+        if not self.match(obj):
+            return obj, ctx
+        #==
+        view, new_ctx = self._read(obj, ctx)
+        return view, new_ctx
+
+    def _read(self, obj, ctx):
+        prop = ScopeProp(obj, self.meta)
+        ctx['layout'].addWidget(prop)
+        new_ctx                  = ctx.copy()
+        new_ctx['layout']        = prop.gb_layout
+        return obj.rvalue().children, new_ctx
+
+        #if obj.parents[0].is_list():
+            #bgb = ScopeProp()
+            #groupbox, layout = bgb, bgb.gb_layout
+        #else:
+            #groupbox, layout = make_scope(str(obj.name) + "::" + str(obj.get_only_child().rtype))
+        ##==
+        #if 'index' in ctx:
+            #ctx['layout'].insertWidget(ctx['index'], groupbox)
+        #else:
+            #ctx['layout'].addWidget(groupbox)
+        ##==
+        #new_ctx                  = ctx.copy()
+        #new_ctx['layout']        = layout
+        #new_ctx['widget']        = groupbox
+        #self.for_list(obj, new_ctx)
+        #return obj.get_only_child().children, new_ctx
+
+#    def for_list(self, obj, ctx):
+        #if obj.rvalue().is_multilist():
+            #button = QPushButton("+")
+            #button.clicked.connect(lambda : self.add_item(obj, ctx))
+            #ctx['layout'].addWidget(button)
+
+    #def add_item(self, obj, ctx):
+        #new_item = obj.get_only_child().get_new_item()
+        #obj.append(new_item, True)
+        #widget = ctx['widget']
+        #parent = widget.parentWidget()
+        #layout = parent.layout()
+        #idx    = layout.indexOf(widget)
+        #widget.setParent(None)
+        ##==
+        #new_ctx                  = ctx.copy()
+        #new_ctx['layout']        = layout
+        #new_ctx['widget']        = parent
+        #new_ctx['index']         = idx
+        #self.meta.read_all([(obj, new_ctx)])
+
+class Root(object):
+    def match(self, obj):
+        return not obj.parents and not obj.is_name() 
+
+    def read(self, obj, ctx):
+        if not self.match(obj):
+            return obj, ctx
+        #==
+        view, new_ctx = self._read(obj, ctx)
+        return view, new_ctx
+
+    def _read(self, obj, ctx):
+        groupbox, layout = make_scope('root' + "::" + str(obj.rtype))
+        ctx['layout'].addWidget(groupbox)
+        new_ctx           = ctx.copy()
+        new_ctx['layout']        = layout
+        new_ctx['widget']        = groupbox
+        return obj.children, new_ctx
+
 
 def make_scope(scope_name):
     groupbox  = QGroupBox(scope_name)
     layout    = QVBoxLayout()
     groupbox.setLayout(layout)
-    groupbox.setStyleSheet("QGroupBox {border:1px solid black; padding: 5px 3px 5px 5px}")
+    groupbox.setStyleSheet("QGroupBox {border:1px solid #dddddd; padding: 5px 3px 5px 5px; margin-top:5px}\
+                            QGroupBox::title {subcontrol-position: left top; color: #333; top: -6px; left:-5px; padding:2px}\ ")
     #==
     return groupbox, layout
 
@@ -110,54 +238,26 @@ class Reader(object):
         return isinstance(obj.get_value(), self._type)
 
     def read(self, obj, ctx):
-        assert obj.is_name() or obj.parents == []
+        assert obj.is_name() 
         if not self.match(obj):
             return obj, ctx
         #==
-        #print "catching %s" %(self._type)
         view, new_ctx = self._read(obj, ctx)
         return view, new_ctx
-class IndexReader(Name):
-    def _create_scope(self, obj):
-        hGroupBox = QGroupBox(str(node))
-        layout    = QVBoxLayout()
-        hGroupBox.setLayout(layout)
-        ctx['layout'].addWidget(hGroupBox)
-        button   = QPushButton("+")
-        button.clicked.connect()
-        ctx['layout'].addWidget(button)
-        if node.is_name(): children = node.children[0].children
-        else             : children = node.children
-        #==
-        return children, {'layout' : layout}
-
-    def xxx(node):
-        rtype = node.name.get_only_child()
-        winst = rtype.factory.Create()
-        node.parents[0].appendT(winst)
-        self.meta.read_one(winst, ctx)
-
-class IndexView(object):
-    def __init__(self, ctx):
-        self.ctw = ctx
 
 
-
-class MeshReader(Reader):
+class Mesh(Reader):
     _type = p_base.Mesh
-
-    def __init__(self, ctx_panda):
-        self.ctx_panda = ctx_panda
 
     def _read(self, mesh_node, ctx):
         mesh = mesh_node.get_value()
-        am   = MeshView(self.ctx_panda)
+        am   = MeshView(self.meta.panda)
         Wrapper(mesh_node['scale'], am.notify_scale)
         Wrapper(mesh_node['path'], am.notify_path)
         for idx, c in enumerate(mesh_node['pos'].children[0].children):
             Wrapper(c, am.notify_pos, {'idx':idx})
         mesh_node.init_notification()
-        return make_scope(mesh_node, ctx)
+        return mesh_node, ctx
 
 class MeshView(object):
     def __init__(self, loader):
@@ -199,86 +299,6 @@ class Wrapper(object):
     def notify(self, transaction):
         self.func(transaction, d=self._dict)
 
-class ListReader(Reader):
-    _type = list
-
-    def _read(self, list_node, ctx):
-        assert list_node.is_name()
-        return make_scope(list_node, ctx)
-
-
-class IntReader(Reader):
-    _type = float
-
-    def __init__(self, ctx_qt):
-        self.ctx_qt = ctx_qt
-
-    def _read(self, int_value, ctx):
-        assert int_value.is_name()
-        #==
-        label    = QLabel(str(int_value.name))
-        spin_box = QDoubleSpinBox()
-        layout   = QHBoxLayout()
-        layout.addWidget(label)
-        layout.addWidget(spin_box)
-        #==
-        spin_box = QDoubleSpinBox()
-        spin_box.setValue(int_value.get_value())
-        spin_box.valueChanged.connect(lambda x: int_value.replace(x, True))
-        #==
-        ctx['layout'].addLayout(layout)
-        #==
-        return None, None
-
-class StrReader(Reader):
-    _type = str
-
-    def __init__(self, ctx_qt):
-        self.ctx_qt = ctx_qt
-
-    def _read(self, str_name, ctx):
-        assert str_name.is_name()
-        #==
-        layout = QHBoxLayout()
-        #==
-        fp = FileProp()
-        fp.connect(str_name)
-        ctx['layout'].addLayout(fp.layout)
-        #==
-        return None, None
-
-class FileProp2(object):
-    def __init__(self):
-        self.layout   = QHBoxLayout()
-        self.name_label    = QLabel()
-        self.value_label   = QLabel()
-        self.button   = QPushButton("...")
-        self.button.clicked.connect(self.choose_path)
-        self.layout.addWidget(self.name_label, 1)
-        self.layout.addWidget(self.value_label, 5)
-        self.layout.addWidget(self.button, 1)
-
-    def connect(self, v):
-        self.target = v
-        self.target.register(self)
-        self.name_label.setText(str(v.name))
-        self.set_value(str(self.target.get_value()))
-
-    def notify(self, transaction):
-        self.set_value(transaction.new)
-
-    def set_value(self, v):
-        self.value_label.setText(v)
-
-    def choose_path(self):
-        path = QFileDialog.getOpenFileName( None,
-                                        "Open Mesh",
-                                        "~",
-                                        self.label.tr("Panda Mesh Files (*.egg *.egg.pz *.bam)"))
-        if path:
-            self.target.replace(str(path), True)
-
-
 class NodeReader(Reader):
     _type = p_base.Node
 
@@ -293,32 +313,13 @@ class NodeReader(Reader):
         self.nodes.append(n)
         return make_scope(any_val, ctx)
 
-class SelectionReader(Reader):
-    _type = (p_base.Selection, p_base.World)
-
-    def __init__(self, ctx_qt):
-        self.ctx_qt = ctx_qt
-
-    def _read(self, val, ctx):
-        return make_scope(val, ctx)
-        
-
-#def reader_prepare(ctx_panda, ctx_qt):
-    #r = []
-    #r.append(MeshReader(ctx_panda))
-    #r.append(ListReader())
-    #r.append(IntReader(ctx_qt))
-    #r.append(StrReader(ctx_qt))
-    #r.append(NodeReader(ctx_qt))
-    #r.append(SelectionReader(ctx_qt))
-    #return r
-
-def reader_prepare(ctx_panda, ctx_qt):
-    r = [Value(), Name([ Value()])]
+def reader_prepare():
+    r = [Root(), Terminal(), Mesh(), NonTerminal()]
     return r
 
 class MetaReader(object):
-    def __init__(self, readers):
+    def __init__(self, readers, panda):
+        self.panda = panda
         self.readers = readers
         for r in self.readers:
             r.meta = self

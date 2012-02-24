@@ -10,7 +10,7 @@ class BaseValidator(TypeValidator):
         self._class = _class
     def __repr__(self):
         return str(self._class)
-    def validate(self, naked_instance):
+    def __call__(self, naked_instance):
         print "validating %s %s" %(naked_instance, self)
         return isinstance(naked_instance, self._class)
 
@@ -23,7 +23,7 @@ class _Type(tree.Node):
         tree.Node.__init__(self, children=children)
 
     def validate(self, naked_instance):
-        return self.type_validator.validate(naked_instance)
+        return self.type_validator(naked_instance)
 
     def get_default(self, factory=None):
         factory = factory or self.factory
@@ -51,7 +51,7 @@ class _Class(_Type):
 
     def validate(self, naked_instance):
         assert self.invariant()
-        return self.type_validator.validate(naked_instance) and \
+        return self.type_validator(naked_instance) and \
                all(child.validate(naked_instance) for child in self.children)
 
     def add_attr(self, name, rtype):

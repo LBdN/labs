@@ -36,6 +36,15 @@ class Value(tree.Node):
     def is_name(self):
         return False
 
+    def is_list(self):
+        return False
+
+    def is_multilist(self):
+        return False
+
+    def is_container(self):
+        return self.children != [] 
+
     def __repr__(self):
         return repr(self.rtype)
 
@@ -68,6 +77,19 @@ class List(Value):
         assert self.rtype.is_multi_list()
         for idx, el in enumerate(self.children):
             el.idx = idx
+
+    def get_new_item(self):
+        assert self.rtype.is_multi_list()
+        return self.children[0].name.get_default()
+
+    def is_container(self):
+        return self.children != [] 
+
+    def is_list(self):
+        return True
+
+    def is_multilist(self):
+        return self.rtype.is_multi_list()
 
 class Name(tree.Node, tree.OneChildMixin):
     def __init__(self, name):
@@ -159,11 +181,23 @@ class Name(tree.Node, tree.OneChildMixin):
         assert self.invariant()
         return result
 
+    def rvalue(self):
+        return self.get_only_child()
+
     def is_name(self):
         return True
 
+    def is_index(self):
+        return False
+
     def is_container(self):
-        return self.get_only_child().children != []
+        return self.rvalue().is_container()
+
+    def is_list(self):
+        return self.rvalue().is_list()
+
+    def is_multi_list(self):
+        return self.rvalue().is_multi_list()
 
 class Index(Name):
     def __init__(self, name, idx):
@@ -177,3 +211,7 @@ class Index(Name):
 
     def extract(self):
         return self.name.extract(self.parents[0].naked_instance, idx=self.idx)
+
+    def is_index(self):
+        return True
+

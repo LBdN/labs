@@ -30,7 +30,7 @@ class GraphWidget(QtGui.QGraphicsView):
         self.setResizeAnchor(QtGui.QGraphicsView.AnchorViewCenter)
         #==
         self.scale(0.8, 0.8)
-        self.setMinimumSize(400, 400)
+        self.setMinimumSize(200, 200)
         self.setWindowTitle("Elastic Nodes")
 
     #def random_pos_items(self):
