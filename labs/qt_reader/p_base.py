@@ -33,9 +33,10 @@ class Selection(b.Reactive):
 class World(b.Reactive):
     selection = t.Rtype(Selection)
     nodes     = t.List().add_idx('multi', t.Rtype(Node))
+    numbers   = t.List().add_idx('multi', t._Type(float))
 
 
-def default_obj(*args):
+def default_obj():
     #==
     n = Node.create()
     m = n.rnode['mesh']
@@ -52,6 +53,7 @@ def default_obj(*args):
     w = World.create()
     w.rnode['nodes'].append(n, True)
     w.rnode['nodes'].append(n2, True)
+    w.rnode['numbers'].replace(map(float, range(5)), True)
     #==
     return w.rnode
 

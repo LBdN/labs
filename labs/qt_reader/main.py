@@ -14,8 +14,8 @@ def debug_trace():
   set_trace()
 sys.modules["__builtin__"].__dict__['debug_func'] = debug_trace
 
-P3D_WIN_WIDTH  = 800
-P3D_WIN_HEIGHT = 500
+P3D_WIN_WIDTH  = 640
+P3D_WIN_HEIGHT = 400
 
 import qtgraph
 
@@ -86,9 +86,17 @@ class QTTest(QMainWindow):
         self.bdock.setWidget(self.view)
         #==
         # this basically creates an idle task
+        self.timer =  QTimer(self)
+        self.timer.timeout.connect(pandaCallback)
+        #self.connect( timer, SIGNAL("timeout()"), pandaCallback )
+        self.timer.start(0)
+        #==
+        self.timers = []
+
+    def set_timer(self, interval, callback):
         timer =  QTimer(self)
-        self.connect( timer, SIGNAL("timeout()"), pandaCallback )
-        timer.start(0)
+        timer.timeout.connect(callback)
+        timer.start(interval)
 
 
 #----------------------------------------------------------------------
@@ -144,16 +152,23 @@ def main():
     form.show()
     
     import reader, p_base
-    ctx_panda = ContextPanda(loader, render)
+    #==
+    ctx_panda   = ContextPanda(loader, render)
+    readers     = reader.reader_prepare()
+    meta_reader = reader.QTMetaReader(readers, ctx_panda)
+    #==
     ctx_qt    = form
-    readers   = reader.reader_prepare()
-    to_read   = p_base.default_obj(taskMgr, base.camera, Task)
+    to_read   = p_base.default_obj()
     ctx       = {}
-    #ctx['panda']  = ctx_panda
     ctx['layout'] = ctx_qt.layout
     ctx['widget'] = ctx_qt.prop_widget
-    meta_reader = reader.MetaReader(readers, ctx_panda)
     meta_reader.read_all([(to_read, ctx)])
+    #==
+    ctx       = {}
+    io_meta_reader = reader.IOMetaReader(reader.io_readers(), "test.io.json")
+    io_meta_reader.read_all([(to_read, {})])
+    form.set_timer(1000, io_meta_reader.write) 
+
 
     #form.centralWidget().setLayout(form.main_layout)
     #form.prop_layout.insertStretch(-1)

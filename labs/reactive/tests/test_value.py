@@ -184,7 +184,15 @@ def test_meta10():
     assert all( isinstance(el, list) for el in p.points)
     #==
     class Listener(object):
-        def notify(self, transaction):
+        def tr_append(self, transaction):
+            print transaction
+        def tr_remove(self, transaction):
+            print transaction
+        def tr_delete(self, transaction):
+            print transaction
+        def tr_replace(self, transaction):
+            print transaction
+        def tr_insert(self, transaction):
             print transaction
     #==
     start = p.points
@@ -239,9 +247,11 @@ def test_meta11():
     m.rnode['pos'].replace([-8.0,42.0,0.0], True)
     n = Node.create()
     n.rnode['shape']['radius'].replace(10, True)
+    n.rnode['shape'].replace(Rect.create(), True)
+    n.rnode['shape']['width'].replace(10, True)
     #==
-    assert isinstance(n.shape, Circle)
-    assert n.shape.radius == 10
+    assert isinstance(n.shape, Rect)
+    assert n.shape.width == 10
 
 def test_meta12():
 

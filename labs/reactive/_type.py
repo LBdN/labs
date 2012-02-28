@@ -2,7 +2,7 @@ from ..data_structure import tree
 #from pprint import pprint as pp
 
 class TypeValidator(object):
-    def validate(self, naked_instance):
+    def __call__(self, naked_instance):
         raise NotImplementedError
 
 class BaseValidator(TypeValidator):
@@ -157,6 +157,9 @@ class Union(_Type):
         for s in enumerate(self.children):
             if s.validate(naked_instance):
                 return s
+
+    def __repr__(self):
+        return '|'.join(map(str, self.children))
 
 def Rtype(_type):
     rtype =  getattr(_type, "rtype")

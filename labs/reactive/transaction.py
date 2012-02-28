@@ -6,7 +6,8 @@ class Transaction(object):
         self.new    = new
         self.old    = old
         self.sender = sender
-        assert self.sender
+        if not self.sender:
+            debug_func()
         assert self.old is not None or isinstance(self, (AppendItem, Init))
         #==
         self.applied_on = None
@@ -20,6 +21,22 @@ class Init(Transaction):
 
     def affect(self, listener):
         listener.tr_replace(self)
+
+    def __repr__(self):
+        return "%s()" \
+                %( str(type(self)))
+
+class Delete(Transaction):
+    def __init__(self, idx, transaction):
+        self.idx = idx
+        self.transaction = transaction
+
+    def affect(self, listener):
+        listener.tr_delete(self)
+
+    def __repr__(self):
+        return "%s()" \
+                %( str(type(self)))
 
 class Replace(Transaction):
     def reverse(self):

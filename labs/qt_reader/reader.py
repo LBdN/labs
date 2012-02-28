@@ -36,27 +36,48 @@ class TerminalProp(QWidget):
         self.layout  = QHBoxLayout(self)
         #==
         if source.is_index():
-            button   = QPushButton("-")
+            button = QPushButton("-")
             button.setMaximumSize(20, 20)
+            button.clicked.connect(lambda x : source.delete(sender=self))
             self.layout.addWidget(button,1)
         #==
-        label    = QLabel(str(source.name))
+        label = QLabel(str(source.as_key()))
         self.layout.addWidget(label,2)
         #==
         self.right_part(source, self.layout)
         #==
+        if source.rvalue().is_union():
+            button = QPushButton(">")
+            button.setMaximumSize(20, 20)
+            button.clicked.connect(lambda x : self.change_type(source))
+            self.layout.addWidget(button,1)
+        #==
         source.register(self)
         source.init_notification()
+
+    def change_type(self, source):
+        union_type  = source.rvalue().rtype
+        active_type = union_type.get_active(source.get_value())
+        idx         = union_type.children.index(active_type)
+        items = map(str, union_type.children)
+        item  = QInputDialog.getItem(self, "Alternative Types", "choose", items, current=idx)
+        if item:
+            i = items.index(item)
+            new_active_type = union_type.children[i]
+            new_inst = new_active_type.get_default()
+            source.replace(new_inst, self)
+
+            textLabel.setText(text)
 
     def right_part(self, source, layout):
         self.label = QLabel(str(source.get_value()))
         layout.addWidget(self.label, 7)
 
-    def notify(self, transaction):
-        transaction.affect(self)
-
     def tr_replace(self, transaction):
         self.set_value(transaction.new)
+
+    def tr_delete(self, transaction):
+        self.setParent(None)
 
     def set_value(self, v):
         self.label.setText(str(v))
@@ -107,50 +128,42 @@ class ScopeProp(QWidget):
         self.layout.addWidget(self.groupbox)
         #==
         if source.is_index():
-            self.button  = QPushButton("-", parent = self)
-            self.button.setMaximumSize(20, 17)
-            self.button.move(10, 5) 
-        if source.rvalue().is_multilist():
+            button  = QPushButton("-", parent = self)
+            button.setMaximumSize(20, 17)
+            button.move(10, 5) 
+            button.clicked.connect(lambda x : source.delete(sender=self))
+        if source.rvalue().is_multi_list():
             button = QPushButton("+")
             button.clicked.connect(lambda : self.add_item(source))
             self.layout.addWidget(button)
-            #source.register(self)
+        source.register(self)
         #==
-        title        = "%s::%s" %(source.name, source.rvalue().rtype)
+        title        = "%s::%s" %(source.as_key(), source.rvalue().rtype)
         self.label   = QLabel(title, parent = self)
         self.label.move(40, 0) 
 
-    def notify(self, tr):
-        tr.affect(self)
+    def tr_delete(self, transaction):
+        self.setParent(None)
+
+    def tr_append(self, transaction):
+        pass
 
     def tr_remove(self, transaction):
-        self.setParent(None)
+        pass
 
     def add_item(self, obj):
         new_item = obj.rvalue().get_new_item()
         obj.append(new_item, True)
+        new_wrapped_item = obj.rvalue().children[-1]
         ctx           = {}
         ctx['layout'] = self.gb_layout
-        self.meta.read_all([(obj, ctx)])
+        self.meta.read_all([(new_wrapped_item, ctx)])
         #==
-        #==
-        #widget = ctx['widget']
-        #parent = widget.parentWidget()
-        #layout = parent.layout()
-        #idx    = layout.indexOf(widget)
-        #widget.setParent(None)
-        ##==
-        #new_ctx                  = ctx.copy()
-        #new_ctx['layout']        = layout
-        #new_ctx['widget']        = parent
-        #new_ctx['index']         = idx
-        #self.meta.read_all([(obj, new_ctx)])
 
 
 class NonTerminal(object):
     def match(self, obj):
-        return obj.is_container()
-        #return not obj.parents or obj.is_container()
+        return obj.rvalue().is_container()
 
     def read(self, obj, ctx):
         if not self.match(obj):
@@ -165,44 +178,6 @@ class NonTerminal(object):
         new_ctx                  = ctx.copy()
         new_ctx['layout']        = prop.gb_layout
         return obj.rvalue().children, new_ctx
-
-        #if obj.parents[0].is_list():
-            #bgb = ScopeProp()
-            #groupbox, layout = bgb, bgb.gb_layout
-        #else:
-            #groupbox, layout = make_scope(str(obj.name) + "::" + str(obj.get_only_child().rtype))
-        ##==
-        #if 'index' in ctx:
-            #ctx['layout'].insertWidget(ctx['index'], groupbox)
-        #else:
-            #ctx['layout'].addWidget(groupbox)
-        ##==
-        #new_ctx                  = ctx.copy()
-        #new_ctx['layout']        = layout
-        #new_ctx['widget']        = groupbox
-        #self.for_list(obj, new_ctx)
-        #return obj.get_only_child().children, new_ctx
-
-#    def for_list(self, obj, ctx):
-        #if obj.rvalue().is_multilist():
-            #button = QPushButton("+")
-            #button.clicked.connect(lambda : self.add_item(obj, ctx))
-            #ctx['layout'].addWidget(button)
-
-    #def add_item(self, obj, ctx):
-        #new_item = obj.get_only_child().get_new_item()
-        #obj.append(new_item, True)
-        #widget = ctx['widget']
-        #parent = widget.parentWidget()
-        #layout = parent.layout()
-        #idx    = layout.indexOf(widget)
-        #widget.setParent(None)
-        ##==
-        #new_ctx                  = ctx.copy()
-        #new_ctx['layout']        = layout
-        #new_ctx['widget']        = parent
-        #new_ctx['index']         = idx
-        #self.meta.read_all([(obj, new_ctx)])
 
 class Root(object):
     def match(self, obj):
@@ -238,7 +213,7 @@ class Reader(object):
         return isinstance(obj.get_value(), self._type)
 
     def read(self, obj, ctx):
-        assert obj.is_name() 
+        assert obj.is_name() or not obj.parents
         if not self.match(obj):
             return obj, ctx
         #==
@@ -247,22 +222,31 @@ class Reader(object):
 
 
 class Mesh(Reader):
-    _type = p_base.Mesh
+    _type = p_base.Node
 
-    def _read(self, mesh_node, ctx):
-        mesh = mesh_node.get_value()
+    def _read(self, node, ctx):
+        mesh_node = node['mesh']
         am   = MeshView(self.meta.panda)
+        node.register(am)
         Wrapper(mesh_node['scale'], am.notify_scale)
         Wrapper(mesh_node['path'], am.notify_path)
         for idx, c in enumerate(mesh_node['pos'].children[0].children):
             Wrapper(c, am.notify_pos, {'idx':idx})
         mesh_node.init_notification()
-        return mesh_node, ctx
+        return node, ctx
 
 class MeshView(object):
     def __init__(self, loader):
         self.loader = loader
         self.mesh   = None
+
+    def tr_delete(self, transaction):
+        print "deleted"
+        self.mesh.removeNode()
+
+    def tr_replace(self, transaction):
+        #managed via the wrappers
+        pass
 
     def notify_path(self, transaction, d=None):
         if self.mesh:
@@ -296,7 +280,7 @@ class Wrapper(object):
         self.func  = func
         self._dict = _dict
 
-    def notify(self, transaction):
+    def tr_replace(self, transaction):
         self.func(transaction, d=self._dict)
 
 class NodeReader(Reader):
@@ -317,9 +301,46 @@ def reader_prepare():
     r = [Root(), Terminal(), Mesh(), NonTerminal()]
     return r
 
+def io_readers():
+    r = [IOReader()]
+    return r
+
+class IOReader(Reader):
+    def __init__(self, *args):
+        Reader.__init__(self, *args)
+        self.io_listener = None
+
+    def match(self, obj):
+        return obj.is_name() or not obj.parents
+
+    def _read(self, obj, ctx):
+        if self.io_listener is None:
+            self.io_listener = IOListener(self.meta)
+        if not obj.parents:
+            self.meta.root = obj
+            return obj.children, ctx
+        else:
+            obj.register(self.io_listener)
+            return obj.rvalue().children, ctx
+
+class IOListener(object):
+    def __init__(self, meta):
+        self.meta = meta
+
+    def tr_delete(self, transaction):
+        self.meta.changed()
+
+    def tr_replace(self, transaction):
+        self.meta.changed()
+
+    def tr_append(self, transaction):
+        self.meta.changed()
+
+    def tr_remove(self, transaction):
+        pass
+
 class MetaReader(object):
-    def __init__(self, readers, panda):
-        self.panda = panda
+    def __init__(self, readers):
         self.readers = readers
         for r in self.readers:
             r.meta = self
@@ -339,9 +360,66 @@ class MetaReader(object):
                     to_read.append(r)
 
     def read_one(self, el, ctx):
-        new_els = []
         for r in self.readers:
             res, nctx = r.read(el, ctx)
             print "%s :: %s -> %s" %(r, el, res)
             if   res is None : return None 
             elif res != el   : return res, nctx
+
+class IOMetaReader(MetaReader):
+    def __init__(self, readers, filepath):
+        MetaReader.__init__(self, readers)
+        self.filepath = filepath
+        self.root     = None
+        self.dirty    = True
+
+    def changed(self):
+        self.dirty = True
+
+    def write(self):
+        if not self.dirty:
+            return
+        if not self.root:
+            return
+        _str = to_json(self.root)
+        print "%s writing" %_str
+        f = open(self.filepath, "w")
+        f.write(_str)
+        #==
+        self.dirty    = False
+
+def to_json(obj):
+    import json
+    k, v = _to_json(obj)
+    return json.dumps(v)
+
+def _to_json(obj):
+    if not obj.parents:
+        k = 'root'
+        v = {}
+        for c in obj.children:
+            k2, v2 = _to_json(c)
+            v[k2] = v2
+        return k, v
+    #==
+    k = obj.as_key()
+    if obj.rvalue().is_list():
+        v = {}
+        v['_type'] = 'multilist' if obj.rvalue().is_multi_list() else 'list'
+    elif obj.rvalue().is_container():
+        v = {}
+        v['_type'] = str(obj.rvalue().rtype)
+    else:
+        v = obj.get_value()
+    #==
+    for c in obj.rvalue().children:
+        k2, v2 = _to_json(c)
+        v[k2] = v2
+    #==
+    return k, v
+
+class QTMetaReader(MetaReader):
+    def __init__(self, readers, panda):
+        MetaReader.__init__(self, readers)
+        self.panda = panda
+

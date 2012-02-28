@@ -48,6 +48,10 @@ rvalue_d = {}
 def wrap(rtype, naked_instance):
     assert naked_instance is not None
     #==
+    if isinstance(rtype, _type.Union):
+        print rtype, naked_instance
+        import pdb
+        pdb.set_trace()
     if isinstance(rtype, _type.Index) and rtype.multi  : 
         assert(len(rtype.children) == 1)
         nodes = []
@@ -72,6 +76,12 @@ def wrap(rtype, naked_instance):
            return [rvalue]
         else:
             nodes = [_value.List(rtype, naked_instance)]
+            for c in rtype.children:
+                vNames = wrap(c, naked_instance)
+                for vName in vNames:
+                    tree.connect(vName, nodes[0])
+    elif isinstance(rtype, _type.Union) : 
+            nodes = [_value.UnionValue(rtype, naked_instance)]
             for c in rtype.children:
                 vNames = wrap(c, naked_instance)
                 for vName in vNames:

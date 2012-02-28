@@ -18,7 +18,7 @@ class Value(tree.Node):
         assert (self.naked_instance == tr.old)
         proposed_value = tr.proposed_value(self.naked_instance)
         if not self.rtype.validate(proposed_value) : 
-            debug_func()
+            #debug_func()
             tr = t.Error(tr); assert False, tr
         tr.do(self)
         assert self.rtype.validate(self.naked_instance)
@@ -39,11 +39,14 @@ class Value(tree.Node):
     def is_list(self):
         return False
 
-    def is_multilist(self):
+    def is_multi_list(self):
         return False
 
     def is_container(self):
         return self.children != [] 
+
+    def is_union(self):
+        return False
 
     def __repr__(self):
         return repr(self.rtype)
@@ -51,6 +54,20 @@ class Value(tree.Node):
     def init_notification(self):
         for c in self.children:
             c.init_notification()
+
+class UnionValue(Value):
+    def __getitem__(self, key):
+        for c in self.children:
+            if c.rtype.validate(self.naked_instance):
+                current = c
+                break
+        return c[key]
+
+    def is_container(self):
+        return False
+
+    def is_union(self):
+        return True
 
 class List(Value):
 
@@ -88,7 +105,7 @@ class List(Value):
     def is_list(self):
         return True
 
-    def is_multilist(self):
+    def is_multi_list(self):
         return self.rtype.is_multi_list()
 
 class Name(tree.Node, tree.OneChildMixin):
@@ -151,6 +168,7 @@ class Name(tree.Node, tree.OneChildMixin):
             # hence processed by the value (aka children[0])
 
     def register(self, listener):
+        #print self,  listener
         if listener not in self.listeners:
             self.listeners.append(listener)
 
@@ -162,7 +180,8 @@ class Name(tree.Node, tree.OneChildMixin):
 
     def fire_notification(self, transaction):
         for l in self.listeners:
-            l.notify(transaction)
+            #print self, transaction, l
+            transaction.affect(l)
 
     def set_value(self, transaction):
         assert self.invariant()
@@ -190,19 +209,16 @@ class Name(tree.Node, tree.OneChildMixin):
     def is_index(self):
         return False
 
-    def is_container(self):
-        return self.rvalue().is_container()
-
-    def is_list(self):
-        return self.rvalue().is_list()
-
-    def is_multi_list(self):
-        return self.rvalue().is_multi_list()
+    def as_key(self):
+        return self.name.name
 
 class Index(Name):
     def __init__(self, name, idx):
         Name.__init__(self, name)
         self.idx = idx
+
+    def as_key(self):
+        return self.idx
 
     def set(self, transaction):
         if not isinstance(self.get_only_child(), List):
@@ -214,4 +230,13 @@ class Index(Name):
 
     def is_index(self):
         return True
+
+    def delete(self, sender=True):
+        vlist = self.parents[0]
+        name  = vlist.parents[0]
+        assert vlist.is_multi_list()
+        tr = name.remove( self.idx, sender)
+        del_tr = t.Delete(self.idx, tr)
+        self.fire_notification(del_tr)
+
 
