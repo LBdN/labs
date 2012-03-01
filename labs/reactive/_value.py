@@ -64,7 +64,7 @@ class UnionValue(Value):
         return c[key]
 
     def is_container(self):
-        return False
+        return any(c.is_container() for c in self.children)
 
     def is_union(self):
         return True

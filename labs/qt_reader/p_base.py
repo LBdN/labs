@@ -24,8 +24,8 @@ class Slot(b.Reactive):
 class Node(b.Reactive):
     name  = t._Type(str)
     slots = t.List().add_idx('multi', t._Type(str))
-    #shape = t.Union(children=[t.Rtype(Circle), t.Rtype(Rect)])
     mesh  = t.Rtype(Mesh)
+    #shape = t.Union(children=[t.Rtype(Circle), t.Rtype(Rect)])
 
 class Selection(b.Reactive):
     nodes = t.List().add_idx('multi', t.Rtype(Node))

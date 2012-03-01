@@ -9,6 +9,7 @@ from PyQt4.QtCore import *
 
 class Terminal(object):
     def match(self, obj):
+        return True
         return not obj.rvalue().is_container() 
 
     def read(self, obj, ctx):
@@ -18,83 +19,223 @@ class Terminal(object):
         view, new_ctx = self._read(obj, ctx)
         return view, new_ctx
 
-    def _read(self, obj, ctx):
-        rvalue = obj.get_value()
-        if isinstance(rvalue, (int, float)):
-            prop = NumberProp(obj)
-        elif isinstance(rvalue, str):
-            prop = PathProp(obj)
-        else:
-            prop = TerminalProp(obj)
-        ctx['layout'].addWidget(prop)
-        return None, None
-
-class TerminalProp(QWidget):
-
-    def __init__(self, source, parent=None):
-        super(TerminalProp, self).__init__(parent=parent)
-        self.layout  = QHBoxLayout(self)
+    def _read(self, source, ctx):
+        widget = BaseWidget(self.meta)
+        widget, source = container_parse(widget, source)
+        widget, source = index_parse(widget, source)
+        widget, source = name_parse(widget, source)
+        widget, source = union_parse(widget, source)
+        widget, source = value_parse(widget, source)
+        widget, source = list_parse(widget, source)
         #==
-        if source.is_index():
-            button = QPushButton("-")
-            button.setMaximumSize(20, 20)
-            button.clicked.connect(lambda x : source.delete(sender=self))
-            self.layout.addWidget(button,1)
-        #==
-        label = QLabel(str(source.as_key()))
-        self.layout.addWidget(label,2)
-        #==
-        self.right_part(source, self.layout)
-        #==
-        if source.rvalue().is_union():
-            button = QPushButton(">")
-            button.setMaximumSize(20, 20)
-            button.clicked.connect(lambda x : self.change_type(source))
-            self.layout.addWidget(button,1)
-        #==
-        source.register(self)
+        source.register(widget)
         source.init_notification()
+        #==
+        ctx['layout'].addWidget(widget)
+        if not source.rvalue().is_container():
+            return None, None
+        if source.rvalue().is_container():
+            new_ctx                  = ctx.copy()
+            new_ctx['layout']        = widget.value_layout
+            return source.rvalue().children, new_ctx
+        if not source.rvalue().is_union():
+            return source.children[0], ctx
 
-    def change_type(self, source):
-        union_type  = source.rvalue().rtype
-        active_type = union_type.get_active(source.get_value())
-        idx         = union_type.children.index(active_type)
-        items = map(str, union_type.children)
-        item  = QInputDialog.getItem(self, "Alternative Types", "choose", items, current=idx)
-        if item:
-            i = items.index(item)
-            new_active_type = union_type.children[i]
-            new_inst = new_active_type.get_default()
-            source.replace(new_inst, self)
+class DeleteEvent(object):
+    def __init__(self, widget):
+        self.widget = widget
+    def __call__(self, transaction):
+        print "Here"
+        self.widget.setParent(None)
 
-            textLabel.setText(text)
+class Event(object):
+    def __call__(self, transaction):
+        print "do nothing"
 
-    def right_part(self, source, layout):
-        self.label = QLabel(str(source.get_value()))
-        layout.addWidget(self.label, 7)
 
-    def tr_replace(self, transaction):
-        self.set_value(transaction.new)
+class BaseWidget(QWidget):
+    def __init__(self, meta):
+        self.meta = meta
+        super(BaseWidget, self).__init__()
+        self.name_layout  = None
+        self.value_layout = None
+        self.tr_replace   = Event()
+        self.tr_delete    = Event()
+        self.tr_remove    = Event()
+        self.tr_append    = Event()
 
-    def tr_delete(self, transaction):
-        self.setParent(None)
+def container_parse(widget, source):
+    if source.rvalue().is_container() : 
+        layout    = QVBoxLayout(widget)
+        #==
+        groupbox  = QGroupBox(widget)
+        gb_layout = QVBoxLayout()
+        groupbox.setLayout(gb_layout)
+        layout.addWidget(groupbox)
+        widget.value_layout = gb_layout
+        #==
+        name = QWidget(widget)
+        name_layout = QHBoxLayout(name)
+        widget.name_layout = name_layout
+    else:
+        layout    = QHBoxLayout(widget)
+        widget.name_layout  = layout
+        widget.value_layout = layout
+    return widget, source
 
-    def set_value(self, v):
-        self.label.setText(str(v))
 
-class NumberProp(TerminalProp):
+def index_parse(widget, source):
+    #==
+    if not source.is_index():
+        return widget, source
+    #==
+    button = QPushButton("-")
+    button.setMaximumSize(20, 20)
+    button.clicked.connect(lambda x : source.delete(sender=widget))
+    widget.name_layout.addWidget(button,1)
+    widget.tr_delete = DeleteEvent(widget) #lambda x,w=widget : widget.setParent(None)
+    return widget, source
 
-    def right_part(self, source, layout):
-        self.spin_box = QDoubleSpinBox()
-        self.spin_box.valueChanged.connect(lambda x: source.replace(x, True))
-        layout.addWidget(self.spin_box,7)
+def name_parse(widget, source):
+    if source.rvalue().is_container() : title = "%s :: %s" %(source.as_key(), source.rvalue().rtype)
+    else                              : title = str(source.as_key())
+    label = QLabel(title, parent = widget)
+    widget.name_layout.addWidget(label,2)
+    return widget, source
 
-    def set_value(self, new_val):
-        self.spin_box.setValue(new_val)
+def value_parse(widget, source):
+    rvalue = source.get_value()
+    if isinstance(rvalue, (int, float)):
+        spin_box = QDoubleSpinBox(widget)
+        spin_box.valueChanged.connect(lambda x: source.replace(x, True))
+        widget.value_layout.addWidget(spin_box,7)
+        widget.tr_replace = lambda x : spin_box.setValue(x.new)
+    elif isinstance(rvalue, str):
+        path_widget = PathProp(source)
+        widget.value_layout.addWidget(path_widget, 7)
+        widget.tr_replace = lambda x : path_widget.path_label.setText(x.new)
+    else:
+        label = QLabel(str(source.get_value()))
+        widget.value_layout.addWidget(label, 7)
+    return widget, source
 
-class PathProp(TerminalProp):
-    def right_part(self, source, layout):
-        self.path_label = QLineEdit()
+def union_parse(widget, source):
+    return widget, source
+    #if not source.rvalue().is_union():
+        #return widget, source
+    #button = QPushButton(">")
+    #button.setMaximumSize(20, 20)
+    #button.clicked.connect(lambda x : self.change_type(source))
+    #widget.tr_replace = lambda x :  x # clear layout, reinspect #widget.setParent(None)
+    #widget.name_layout.addWidget(button,1)
+        #==
+
+#def change_type(widget, source):
+    #union_type  = source.rvalue().rtype
+    #active_type = union_type.get_active(source.get_value())
+    #idx         = union_type.children.index(active_type)
+    #items = map(str, union_type.children)
+    #item  = QInputDialog.getItem(widget, "Alternative Types", "choose", items, current=idx)
+    #if item:
+        #i = items.index(item)
+        #new_active_type = union_type.children[i]
+        #new_inst = new_active_type.get_default()
+        #source.replace(new_inst, widget)
+
+
+def list_parse(widget, source):
+    if not source.rvalue().is_multi_list():
+        return widget, source
+    #==
+    button = QPushButton("+")
+    button.clicked.connect(lambda : add_item(source, widget.meta, widget.value_layout))
+    widget.value_layout.addWidget(button)
+    #==
+    return widget, source
+
+def add_item(obj, meta, layout):
+    new_item = obj.rvalue().get_new_item()
+    obj.append(new_item, True)
+    new_wrapped_item = obj.rvalue().children[-1]
+    ctx           = {}
+    ctx['layout'] = layout
+    meta.read_all([(new_wrapped_item, ctx)])
+
+#class TerminalProp(QWidget):
+
+    #def __init__(self, source, parent=None):
+        #assert False
+        #super(TerminalProp, self).__init__(parent=parent)
+        #self.layout  = QHBoxLayout(self)
+        #self.name_layout 
+        ##==
+        #self, source = index_parse(self, source)
+        #self, source = name_parse(self, source)
+        #self, source = union_parse(self, source)
+        #self, source = value_parse(self, source)
+        ##==
+        #label = QLabel(str(source.as_key()))
+        #self.layout.addWidget(label,2)
+        ##==
+        #if source.rvalue().is_union():
+            #stacked = QStackedWidget(self)
+            #self.layout.addWidget(stacked)
+            #layout = stacked
+        #else:
+            #layout = self.layout
+        #self.right_part(source, layout)
+        ##==
+        #if source.rvalue().is_union():
+            #button = QPushButton(">")
+            #button.setMaximumSize(20, 20)
+            #button.clicked.connect(lambda x : self.change_type(source))
+            #self.layout.addWidget(button,1)
+        ##==
+        #source.register(self)
+        #source.init_notification()
+
+    #def change_type(self, source):
+        #union_type  = source.rvalue().rtype
+        #active_type = union_type.get_active(source.get_value())
+        #idx         = union_type.children.index(active_type)
+        #items = map(str, union_type.children)
+        #item  = QInputDialog.getItem(self, "Alternative Types", "choose", items, current=idx)
+        #if item:
+            #i = items.index(item)
+            #new_active_type = union_type.children[i]
+            #new_inst = new_active_type.get_default()
+            #source.replace(new_inst, self)
+
+            #textLabel.setText(text)
+
+    #def right_part(self, source, layout):
+        #self.label = QLabel(str(source.get_value()))
+        #layout.addWidget(self.label, 7)
+
+    #def tr_replace(self, transaction):
+        #self.set_value(transaction.new)
+
+    #def tr_delete(self, transaction):
+        #self.setParent(None)
+
+    #def set_value(self, v):
+        #self.label.setText(str(v))
+
+#class NumberProp(TerminalProp):
+
+    #def right_part(self, source, layout):
+        #self.spin_box = QDoubleSpinBox()
+        #self.spin_box.valueChanged.connect(lambda x: source.replace(x, True))
+        #layout.addWidget(self.spin_box,7)
+
+    #def set_value(self, new_val):
+        #self.spin_box.setValue(new_val)
+
+class PathProp(QWidget):
+    def __init__(self, source):
+        super(PathProp, self).__init__()
+        layout = QHBoxLayout(self)
+        self.path_label = QLineEdit(self)
         self.path_label.setReadOnly(True)
         self.path_label.textChanged.connect(lambda x: source.replace(str(x), True))
         self.button      = QPushButton("...")

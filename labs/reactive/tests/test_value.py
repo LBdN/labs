@@ -255,6 +255,40 @@ def test_meta11():
 
 def test_meta12():
 
+    class Rect(b.Reactive):
+        width  = t._Type(int)
+        height = t._Type(int)
+
+    class Circle(b.Reactive):
+        radius = t._Type(int)
+
+    class Node(b.Reactive):
+        name = t._Type(str)
+        shape = t.Union(children=[t.Rtype(Circle), t.Rtype(Rect)])
+
+    class Mesh(b.Reactive):
+        path  = t._Type(str)
+        scale = t._Type(float)
+        pos   = t.List().add_idxs([t._Type(float), t._Type(float), t._Type(float)])
+        node  = t.Rtype(Node)
+
+    #==
+    m = Mesh.create().rnode
+    m['path'].replace("models/environment", True)
+    m['scale'].replace(0.25, True)
+    m['pos'].replace([-8.0,42.0,0.0], True)
+    n = m['node']
+    n['shape']['radius'].replace(10, True)
+    n['shape'].replace(Rect.create(), True)
+    n['shape']['width'].replace(10, True)
+    #==
+    inst = n.get_value()
+    assert isinstance(inst.shape, Rect)
+    assert inst.shape.width == 10
+    return m
+
+def test_meta13():
+
     class Mesh(b.Reactive):
         path  = t._Type(str)
         scale = t._Type(float)

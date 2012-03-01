@@ -32,6 +32,7 @@ class Delete(Transaction):
         self.transaction = transaction
 
     def affect(self, listener):
+        print type(listener.tr_delete)
         listener.tr_delete(self)
 
     def __repr__(self):

@@ -44,13 +44,6 @@ class QTTest(QMainWindow):
         super(QMainWindow, self).__init__(parent)
         self.setWindowTitle("Test")
         self.setGeometry(30,30,800,700)
-
-
-        #self.layout      = QHBoxLayout()
-        #self.prop_layout = QVBoxLayout()
-        #self.prop_layout.insertStretch(-1)
-        #self.layout.addLayout(self.prop_layout)
-        #self.layout.addLayout(self.layout)
         #==
         centralWidget = QWidget(self)
         self.setCentralWidget(centralWidget)
@@ -66,18 +59,14 @@ class QTTest(QMainWindow):
         self.addDockWidget(Qt.RightDockWidgetArea, self.ldock)
         self.layout = QVBoxLayout()
         self.prop_widget = QWidget(self)
-
         self.prop_widget.setSizePolicy(QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding))
         #self.prop_widget.setMinimumSize(400, 800)
         self.prop_widget.setLayout(self.layout)
         self.scrollarea = QScrollArea()
         self.scrollarea.setWidgetResizable(True)
-
         self.scrollarea.setWidget(self.prop_widget)
         self.ldock.setWidget(self.scrollarea)
-        #self.ldock.setWidget(self.prop_widget)
         self.prop_widget.show()
-
         #==
         self.bdock = QDockWidget(self.tr("Transformation Graph"), self)
         self.addDockWidget(Qt.BottomDockWidgetArea, self.bdock)
@@ -168,9 +157,5 @@ def main():
     io_meta_reader = reader.IOMetaReader(reader.io_readers(), "test.io.json")
     io_meta_reader.read_all([(to_read, {})])
     form.set_timer(1000, io_meta_reader.write) 
-
-
-    #form.centralWidget().setLayout(form.main_layout)
-    #form.prop_layout.insertStretch(-1)
     ctx_qt.prop_widget.show()
     app.exec_()
