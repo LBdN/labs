@@ -36,7 +36,7 @@ class Reactive(object):
     def __init__(self, **kw):
         self.__dict__.update(kw)
         nodes = wrap(self.rtype, self)
-        assert len(nodes) == 1
+        assert (len(nodes) == 1)
         self.rnode = nodes[0]
 
     @classmethod
@@ -46,12 +46,8 @@ class Reactive(object):
 rvalue_d = {}
 
 def wrap(rtype, naked_instance):
-    assert naked_instance is not None
+    assert_ (naked_instance is not None)
     #==
-    if isinstance(rtype, _type.Union):
-        print rtype, naked_instance
-        import pdb
-        pdb.set_trace()
     if isinstance(rtype, _type.Index) and rtype.multi  : 
         assert(len(rtype.children) == 1)
         nodes = []
@@ -69,7 +65,7 @@ def wrap(rtype, naked_instance):
         for vName in vNames:
             tree.connect(vName, nodes[0])
     elif isinstance(rtype, _type.List) : 
-        assert isinstance(naked_instance, list)
+        assert (isinstance(naked_instance, list))
         key    = id(naked_instance)
         rvalue = rvalue_d.get(key)
         if rvalue:
@@ -82,8 +78,12 @@ def wrap(rtype, naked_instance):
                     tree.connect(vName, nodes[0])
     elif isinstance(rtype, _type.Union) : 
             nodes = [_value.UnionValue(rtype, naked_instance)]
+            print rtype
+            print rtype.children
             for c in rtype.children:
+                print c, naked_instance
                 vNames = wrap(c, naked_instance)
+                print vNames
                 for vName in vNames:
                     tree.connect(vName, nodes[0])
     elif isinstance(rtype, _type._Type) : 

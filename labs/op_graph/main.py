@@ -72,8 +72,8 @@ def exec_OpFunc(state, opfuncs):
     return state
 
 
-class Params(object):
-    def resolve_context(self, context):
+#class Params(object):
+    #def resolve_context(self, context):
 
 
 

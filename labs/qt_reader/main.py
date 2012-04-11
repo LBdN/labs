@@ -6,13 +6,17 @@ from PyQt4.QtCore import *
 from PyQt4.QtGui  import *
 
 import sys
-def debug_trace():
+def debug_trace(trigger=False):
   '''Set a tracepoint in the Python debugger that works with Qt'''
+  if  trigger:
+      return
   from PyQt4.QtCore import pyqtRemoveInputHook
   from pdb          import set_trace
   pyqtRemoveInputHook()
   set_trace()
+
 sys.modules["__builtin__"].__dict__['debug_func'] = debug_trace
+sys.modules["__builtin__"].__dict__['assert_'] = debug_trace
 
 P3D_WIN_WIDTH  = 640
 P3D_WIN_HEIGHT = 400
@@ -23,7 +27,7 @@ from direct.showbase.DirectObject import *
 from pandac.PandaModules          import WindowProperties
 from pandac.PandaModules          import loadPrcFileData
 from pandac.PandaModules          import *
-from direct.task                  import Task
+#from direct.task                  import Task
 from math                         import *
 
 import sys
@@ -31,6 +35,8 @@ import sys
 #loadPrcFileData("", "fullscreen 1")
 loadPrcFileData("", "window-title Bridge")
 loadPrcFileData("", "window-type none")
+loadPrcFileData("", "want-directtools #t")
+loadPrcFileData("", "want-tk #t")
 
 import direct.directbase.DirectStart
 
@@ -43,7 +49,7 @@ class QTTest(QMainWindow):
     def __init__(self, pandaCallback, parent=None):
         super(QMainWindow, self).__init__(parent)
         self.setWindowTitle("Test")
-        self.setGeometry(30,30,800,700)
+        self.setGeometry(30,30,1200,700)
         #==
         centralWidget = QWidget(self)
         self.setCentralWidget(centralWidget)
@@ -56,11 +62,11 @@ class QTTest(QMainWindow):
         self.main_layout.addWidget(self.pandaContainer)
         #==
         self.ldock = QDockWidget(self.tr("Nodes Properties"), self)
+        self.ldock.setMinimumSize(800, 400)
         self.addDockWidget(Qt.RightDockWidgetArea, self.ldock)
         self.layout = QVBoxLayout()
         self.prop_widget = QWidget(self)
         self.prop_widget.setSizePolicy(QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding))
-        #self.prop_widget.setMinimumSize(400, 800)
         self.prop_widget.setLayout(self.layout)
         self.scrollarea = QScrollArea()
         self.scrollarea.setWidgetResizable(True)
@@ -122,6 +128,9 @@ class PandaPseudoWindow(DirectObject):
     def step(self):
         taskMgr.step()
 
+import gizmos
+from gizmos.gizmoDemo import GizmoDemo
+
 class ContextPanda(object):
     def __init__(self, loader, render):
         self.loader = loader
@@ -132,6 +141,10 @@ class ContextPanda(object):
         obj.reparentTo(self.render)
         return obj
 
+import reader_io
+import reader_qt
+import reader_3d
+import p_base
 
 def main():
     world = PandaPseudoWindow()
@@ -139,23 +152,29 @@ def main():
     form  = QTTest(world.step)
     world.bindToWindow(int(form.winId()))
     form.show()
-    
-    import reader, p_base
     #==
-    ctx_panda   = ContextPanda(loader, render)
-    readers     = reader.reader_prepare()
-    meta_reader = reader.QTMetaReader(readers, ctx_panda)
-    #==
-    ctx_qt    = form
     to_read   = p_base.default_obj()
-    ctx       = {}
+    #==
+    readers       = reader_qt.reader_prepare()
+    meta_reader   = reader_qt.QTMetaReader(readers)
+    ctx_qt        = form
+    ctx           = {}
     ctx['layout'] = ctx_qt.layout
     ctx['widget'] = ctx_qt.prop_widget
     meta_reader.read_all([(to_read, ctx)])
     #==
+    readers   = reader_3d.get_3d_readers()
+    #ctx_panda = ContextPanda(loader, render)
+    ctx_panda = GizmoDemo()
+    meta3d    = reader_3d.ThreeDMetaReader(readers, ctx_panda)
     ctx       = {}
-    io_meta_reader = reader.IOMetaReader(reader.io_readers(), "test.io.json")
+    meta3d.read_all([(to_read, ctx)])
+    #==
+    ctx            = {}
+    io_meta_reader = reader_io.IOMetaReader(reader_io.io_readers(), "test.io.json")
     io_meta_reader.read_all([(to_read, {})])
     form.set_timer(1000, io_meta_reader.write) 
+    #==
     ctx_qt.prop_widget.show()
+    to_read.init_notification()
     app.exec_()

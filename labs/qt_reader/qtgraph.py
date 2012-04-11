@@ -4,11 +4,11 @@
 Module implementing MainWindow.
 """
 from PyQt4        import QtCore, QtGui
-from PyQt4.QtGui  import QMainWindow
-from PyQt4.QtCore import pyqtSignature
+#from PyQt4.QtGui  import QMainWindow
+#from PyQt4.QtCore import pyqtSignature
 #from Ui_neteditor import Ui_MainWindow
 #from data_io      import loadData
-from numpy        import array
+#from numpy        import array
 #==
 #import networkx as nx
 import math

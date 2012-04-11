@@ -18,7 +18,7 @@ class Value(tree.Node):
         assert (self.naked_instance == tr.old)
         proposed_value = tr.proposed_value(self.naked_instance)
         if not self.rtype.validate(proposed_value) : 
-            #debug_func()
+            debug_func()
             tr = t.Error(tr); assert False, tr
         tr.do(self)
         assert self.rtype.validate(self.naked_instance)
@@ -27,8 +27,8 @@ class Value(tree.Node):
         for p in self.parents:
             p.post_set_value(tr)
 
-    def replaceT(self, new, sender):
-        return t.Replace(new, self.naked_instance, sender)
+    def replaceT(self, new, sender, target):
+        return t.Replace(new, self.naked_instance, sender, target)
 
     def get_value(self):
         return self.naked_instance
@@ -57,17 +57,40 @@ class Value(tree.Node):
 
 class UnionValue(Value):
     def __getitem__(self, key):
-        for c in self.children:
-            if c.rtype.validate(self.naked_instance):
-                current = c
-                break
-        return c[key]
+        return self.children[0][key]
+
+    def rvalue(self):
+        return self.children[0]
 
     def is_container(self):
-        return any(c.is_container() for c in self.children)
+        return self.children[0].is_container()
 
     def is_union(self):
         return True
+
+    #def is_index(self):
+        #return False
+
+    def change_typeT(self, new, sender, target):
+        return t.ChangeType(new, old=self.naked_instance, sender=sender, target=target)
+
+    def replace(self, new, sender):
+        return self.parents[0].replace(new, sender)
+
+    def insert(self, idx, val, sender):
+        return self.parents[0].insert(idx, val, sender)
+
+    def append(self, new, sender):
+        return self.parents[0].append(new, sender)
+
+    def remove(self, new, sender):
+        return self.parents[0].remove(new, sender)
+
+    def change_type(self, new, sender):
+        return self.parents[0].change_type(new, sender)
+
+    def register(self, listener):
+        self.parents[0].register(listener)
 
 class List(Value):
 
@@ -78,17 +101,17 @@ class List(Value):
         c = self.children[key]
         return c
 
-    def replaceT(self, new, sender):
-        return t.Replace(new, old=self.naked_instance[:], sender=sender)
+    def replaceT(self, new, sender, target):
+        return t.Replace(new, old=self.naked_instance[:], sender=sender, target=target)
 
-    def appendT(self, new, sender):
-        return t.AppendItem(new, old=self.naked_instance[:], sender=sender)
+    def appendT(self, new, sender, target):
+        return t.AppendItem(new, old=self.naked_instance[:], sender=sender, target=target)
 
-    def removeT(self, idx, sender):
-        return t.RemoveItem(idx, old=self.naked_instance[:], sender=sender)
+    def removeT(self, idx, sender, target):
+        return t.RemoveItem(idx, old=self.naked_instance[:], sender=sender, target=target)
 
-    def insertT(self, idx, val, sender):
-        return t.InsertItem((idx, val), old=self.naked_instance[:], sender=sender)
+    def insertT(self, idx, val, sender, target):
+        return t.InsertItem((idx, val), old=self.naked_instance[:], sender=sender, target=target)
 
     def reorder_indexes(self):
         assert self.rtype.is_multi_list()
@@ -97,10 +120,10 @@ class List(Value):
 
     def get_new_item(self):
         assert self.rtype.is_multi_list()
-        return self.children[0].name.get_default()
+        return self.rtype.children[0].get_default()
 
     def is_container(self):
-        return self.children != [] 
+        return True
 
     def is_list(self):
         return True
@@ -108,11 +131,13 @@ class List(Value):
     def is_multi_list(self):
         return self.rtype.is_multi_list()
 
+
 class Name(tree.Node, tree.OneChildMixin):
     def __init__(self, name):
         self.name        = name
         self.listeners   = []
         tree.Node.__init__(self)
+        self.locked      = False
 
     def __repr__(self):
         return "value.Name: %s" %repr(self.name)
@@ -122,25 +147,31 @@ class Name(tree.Node, tree.OneChildMixin):
 
     def replace(self, new, sender):
         value = self.get_only_child()
-        t = value.replaceT(new, sender)
+        t = value.replaceT(new, sender, self)
         self.set_value(t)
         return t
 
-    def insert(self, *args):
+    def insert(self, idx, val, sender):
         value = self.get_only_child()
-        t = value.insertT(*args)
+        t = value.insertT(idx, val, sender, self)
         self.set_value(t)
         return t
 
-    def append(self, *args):
+    def append(self, new, sender):
         value = self.get_only_child()
-        t = value.appendT(*args)
+        t = value.appendT(new, sender, self)
         self.set_value(t)
         return t
 
-    def remove(self, *args):
+    def remove(self, new, sender):
         value = self.get_only_child()
-        t = value.removeT(*args)
+        t = value.removeT(new, sender, self)
+        self.set_value(t)
+        return t
+
+    def change_type(self, new, sender):
+        value = self.get_only_child()
+        t = value.change_typeT(new, sender, self)
         self.set_value(t)
         return t
 
@@ -168,12 +199,16 @@ class Name(tree.Node, tree.OneChildMixin):
             # hence processed by the value (aka children[0])
 
     def register(self, listener):
+        assert_( not self.locked)
         #print self,  listener
         if listener not in self.listeners:
             self.listeners.append(listener)
 
+    def lock(self):
+        self.locked = True
+
     def init_notification(self):
-        tr = t.Init(self.get_value(), sender=self)
+        tr = t.Init(self.get_value(), sender=self, target=self)
         self.fire_notification(tr)
         for c in self.children:
             c.init_notification()
@@ -192,7 +227,15 @@ class Name(tree.Node, tree.OneChildMixin):
         if not isinstance(transaction, t.Error):
             self.set(transaction)
         assert self.invariant() # no warranty once we call notify
+        #==
         self.fire_notification(transaction)
+        if isinstance(transaction, t.AppendItem):
+            self.rvalue().children[-1].init_notification()
+        if isinstance(transaction, t.InsertItem):
+            self.rvalue().children[transaction.new[0]].init_notification()
+        if isinstance(transaction, t.ChangeType):
+            self.rvalue().children[0].init_notification()
+        #==
 
     def get_value(self):
         child     = self.get_only_child()
@@ -211,6 +254,10 @@ class Name(tree.Node, tree.OneChildMixin):
 
     def as_key(self):
         return self.name.name
+
+    def full_name(self):
+        parents = [str(p.as_key()) for p in tree.walk_up(self, []) if p.is_name()]
+        return '/'.join(parents)
 
 class Index(Name):
     def __init__(self, name, idx):
@@ -238,5 +285,3 @@ class Index(Name):
         tr = name.remove( self.idx, sender)
         del_tr = t.Delete(self.idx, tr)
         self.fire_notification(del_tr)
-
-

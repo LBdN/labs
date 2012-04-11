@@ -2,29 +2,29 @@ import _base as b
 from ..data_structure import tree
 
 class Transaction(object):
-    def __init__(self, new, old=None, sender=None):
+    def __init__(self, new, old=None, sender=None, target=None):
+        assert old is not None or isinstance(self, (AppendItem, Init))
+        if not sender or not target:
+            debug_func()
+        #==
         self.new    = new
         self.old    = old
         self.sender = sender
-        if not self.sender:
-            debug_func()
-        assert self.old is not None or isinstance(self, (AppendItem, Init))
-        #==
-        self.applied_on = None
-        self.vnames     = None
+        self.target = target
 
     def __repr__(self):
+        str_type = self.__class__.__name__ #str(type(self).re
         return "%s(new:%s old:%s sender:%s)" \
-                %( str(type(self)), self.new, self.old, self.sender)
+                %( str_type, self.new, self.old, self.sender)
 
 class Init(Transaction):
 
     def affect(self, listener):
         listener.tr_replace(self)
 
-    def __repr__(self):
-        return "%s()" \
-                %( str(type(self)))
+    #def __repr__(self):
+        #return "%s()" \
+                #%( str(type(self)))
 
 class Delete(Transaction):
     def __init__(self, idx, transaction):
@@ -62,6 +62,31 @@ class Replace(Transaction):
 
     def affect(self, listener):
         listener.tr_replace(self)
+
+class ChangeType(Transaction):
+
+    def reverse(self):
+        new, old = self.old, self.new
+        return ChangeType(self.old, old=self.new, sender=self.sender)
+
+    def proposed_value(self, naked_instance):
+        assert naked_instance == self.old
+        return self.new
+
+    def do(self, rvalue):
+        for c in rvalue.children[:]:
+            tree.disconnect(c, rvalue)
+        rvalue.naked_instance = self.new
+        active_type = rvalue.rtype.get_active(self.new)
+        vIndexes = b.wrap(active_type, self.new)
+        for vIndex in vIndexes:
+            tree.connect(vIndex, rvalue)
+        #==
+        if isinstance(rvalue.naked_instance, list):
+            assert len(rvalue.children[0].children)==len(rvalue.naked_instance)
+
+    def affect(self, listener):
+        listener.tr_change_type(self)
 
 class InsertItem(Transaction):
     def reverse(self):

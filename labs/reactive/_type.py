@@ -11,7 +11,7 @@ class BaseValidator(TypeValidator):
     def __repr__(self):
         return str(self._class)
     def __call__(self, naked_instance):
-        print "validating %s %s" %(naked_instance, self)
+        #print "validating %s %s" %(naked_instance, self)
         return isinstance(naked_instance, self._class)
 
 class _Type(tree.Node):
@@ -88,9 +88,9 @@ class List(_Type):
     def invariant(self):
         return all(isinstance(child, Index) for child in self.children)
 
-    def __init__(self, factory=None):
+    def __init__(self, factory=None, type_validator=None):
         factory = factory or list
-        _Type.__init__(self, factory)
+        _Type.__init__(self, factory, type_validator=type_validator)
 
     def is_multi_list(self):
         return len(self.children)==1 and self.children[0].multi
@@ -154,7 +154,7 @@ class Union(_Type):
         return self.children[0].get_default()
 
     def get_active(self, naked_instance):
-        for s in enumerate(self.children):
+        for s in self.children:
             if s.validate(naked_instance):
                 return s
 

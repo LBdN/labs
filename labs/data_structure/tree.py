@@ -65,6 +65,16 @@ class OneChildMixin(object):
     def get_only_child(self):
         return self.children[0]
 
+def walk_up(node, acc=[]):
+    #assert len(node.parents) == 1
+    #==
+    acc.append(node)
+    if node.parents == []:
+        acc.reverse()
+        return acc
+    else:
+        return walk_up(node.parents[0], acc)
+
 
 def prettyprint(node, inc, _str=None):
     _str = '  '*inc+ str(node)+'\n'
