@@ -2,6 +2,22 @@ import _value
 import _type 
 from ..data_structure import tree
 
+#=================
+# for debug, assert_ is used to debug when in QT
+# need to be replaced for debugging
+# same for debug_func
+import sys
+if 'assert_' not in sys.modules["__builtin__"].__dict__:
+    def assert_(x):
+        assert(x)
+    sys.modules["__builtin__"].__dict__['assert_'] = assert_
+if 'debug_func' not in sys.modules["__builtin__"].__dict__:
+    def pass_():
+        pass
+    sys.modules["__builtin__"].__dict__['debug_func'] = pass_
+#=================
+
+
 keywords = ('__interface__', '__rmodule__', '__factory__')
 
 class ReactiveMeta(type):
